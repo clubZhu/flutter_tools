@@ -113,6 +113,38 @@ class HomePage extends StatelessWidget {
                 textStyle: const TextStyle(fontSize: 18),
               ),
             ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                AppNavigation.goToVideoRecording();
+              },
+              icon: const Icon(Icons.videocam),
+              label: const Text('录制视频'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                textStyle: const TextStyle(fontSize: 18),
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: () {
+                AppNavigation.goToVideoHistory();
+              },
+              icon: const Icon(Icons.video_library),
+              label: const Text('录制历史'),
+              style: ElevatedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
+                textStyle: const TextStyle(fontSize: 18),
+              ),
+            ),
             const SizedBox(height: 20),
             // Language switcher
             Row(

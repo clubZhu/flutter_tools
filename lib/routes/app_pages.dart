@@ -9,6 +9,9 @@ import 'package:calculator_app/pages/html_test_page.dart';
 import 'package:calculator_app/pages/settings_page.dart';
 import 'package:calculator_app/pages/video_download_page.dart';
 import 'package:calculator_app/pages/web_service_page.dart';
+import 'package:calculator_app/pages/video_recording_page.dart';
+import 'package:calculator_app/pages/video_preview_page.dart';
+import 'package:calculator_app/pages/video_history_page.dart';
 
 /// 路由页面配置
 class AppPages {
@@ -48,6 +51,18 @@ class AppPages {
     GetPage(
       name: AppRoutes.WEB_SERVICE,
       page: () => const WebServicePage(),
+    ),
+    GetPage(
+      name: AppRoutes.VIDEO_RECORDING,
+      page: () => VideoRecordingPage(),
+    ),
+    GetPage(
+      name: AppRoutes.VIDEO_PREVIEW,
+      page: () => const VideoPreviewPage(),
+    ),
+    GetPage(
+      name: AppRoutes.VIDEO_HISTORY,
+      page: () => const VideoHistoryPage(),
     ),
   ];
 }

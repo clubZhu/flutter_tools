@@ -76,6 +76,20 @@ dependencies:
   # Open File for opening downloaded files
   open_filex: ^4.7.0
 
+  # Camera for video recording
+  camera: ^0.10.5+5
+
+  # Share Plus for sharing videos
+  share_plus: ^7.2.1
+
+  # SQFlite for local database
+  sqflite: ^2.3.0
+
+  # Path for file path manipulation
+  path: ^1.8.3
+
+  # UUID for generating unique IDs
+  uuid: ^4.2.2
 
 
 dev_dependencies:

@@ -45,6 +45,16 @@ class AppNavigation {
     Get.toNamed(AppRoutes.WEB_SERVICE);
   }
 
+  /// 跳转到视频录制页面
+  static void goToVideoRecording() {
+    Get.toNamed(AppRoutes.VIDEO_RECORDING);
+  }
+
+  /// 跳转到视频历史页面
+  static void goToVideoHistory() {
+    Get.toNamed(AppRoutes.VIDEO_HISTORY);
+  }
+
   /// 返回上一页
   static void goBack<T>([T? result]) {
     Get.back(result: result);
