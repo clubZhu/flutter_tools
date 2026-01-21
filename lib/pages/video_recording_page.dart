@@ -267,6 +267,7 @@ class _VideoRecordingPageState extends State<VideoRecordingPage> {
 }
 
 /// 带动画效果的录制按钮
+/// 带动画效果的录制按钮
 class _AnimatedRecordButton extends StatefulWidget {
   final bool isRecording;
   final VoidCallback onStartRecording;
@@ -286,8 +287,11 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
     with TickerProviderStateMixin {
   late AnimationController _scaleController;
   late AnimationController _pulseController;
+  late AnimationController _morphController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _pulseAnimation;
+  late Animation<double> _morphAnimation;
+  late Animation<Color?> _colorAnimation;
 
   @override
   void initState() {
@@ -295,11 +299,11 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
 
     // 点击缩放动画控制器
     _scaleController = AnimationController(
-      duration: const Duration(milliseconds: 150),
+      duration: const Duration(milliseconds: 120),
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.85).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.90).animate(
       CurvedAnimation(
         parent: _scaleController,
         curve: Curves.easeInOut,
@@ -308,25 +312,49 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
 
     // 录制时脉冲动画控制器
     _pulseController = AnimationController(
-      duration: const Duration(milliseconds: 1000),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
 
-    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.15).animate(
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.2).animate(
       CurvedAnimation(
         parent: _pulseController,
         curve: Curves.easeInOut,
       ),
     );
+
+    // 形状变形动画控制器
+    _morphController = AnimationController(
+      duration: const Duration(milliseconds: 400),
+      vsync: this,
+    );
+
+    _morphAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _morphController,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
+
+    // 颜色过渡动画
+    _colorAnimation = ColorTween(
+      begin: Colors.white,
+      end: Colors.red,
+    ).animate(_morphController);
   }
 
   @override
   void didUpdateWidget(_AnimatedRecordButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 当开始录制时启动脉冲动画
+    
+    // 当开始录制时
     if (widget.isRecording && !oldWidget.isRecording) {
+      _morphController.forward();
       _pulseController.repeat(reverse: true);
-    } else if (!widget.isRecording && oldWidget.isRecording) {
+    } 
+    // 当停止录制时
+    else if (!widget.isRecording && oldWidget.isRecording) {
+      _morphController.reverse();
       _pulseController.stop();
       _pulseController.reset();
     }
@@ -336,6 +364,7 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
   void dispose() {
     _scaleController.dispose();
     _pulseController.dispose();
+    _morphController.dispose();
     super.dispose();
   }
 
@@ -357,10 +386,18 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
     return GestureDetector(
       onTap: _handleTap,
       child: AnimatedBuilder(
-        animation: Listenable.merge([_scaleAnimation, _pulseAnimation]),
+        animation: Listenable.merge([
+          _scaleAnimation, 
+          _pulseAnimation, 
+          _morphAnimation,
+        ]),
         builder: (context, child) {
+          // 计算缩放：点击缩放 + 录制时脉冲
           final scale = _scaleAnimation.value *
               (widget.isRecording ? _pulseAnimation.value : 1.0);
+
+          // 计算内圈大小：从64渐变到32
+          final innerSize = 64 - (32 * _morphAnimation.value);
 
           return Transform.scale(
             scale: scale,
@@ -370,34 +407,73 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(
-                  color: Colors.white,
+                  color: _colorAnimation.value ?? Colors.white,
                   width: 4,
                 ),
                 boxShadow: widget.isRecording
                     ? [
+                        // 外发光效果
                         BoxShadow(
-                          color: Colors.red.withOpacity(0.5),
-                          blurRadius: 20,
-                          spreadRadius: 5,
+                          color: Colors.red.withOpacity(0.4),
+                          blurRadius: 25,
+                          spreadRadius: 8,
+                        ),
+                        // 内部阴影
+                        BoxShadow(
+                          color: Colors.red.withOpacity(0.3),
+                          blurRadius: 15,
+                          spreadRadius: 3,
                         ),
                       ]
-                    : [],
+                    : [
+                        // 未录制时的阴影
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.2),
+                          blurRadius: 10,
+                          spreadRadius: 2,
+                        ),
+                      ],
               ),
               child: Center(
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: widget.isRecording ? 32 : 64,
-                  height: widget.isRecording ? 32 : 64,
+                  duration: const Duration(milliseconds: 200),
+                  curve: Curves.easeInOut,
+                  width: innerSize,
+                  height: innerSize,
                   decoration: BoxDecoration(
-                    color: widget.isRecording ? Colors.red : Colors.white,
+                    color: _colorAnimation.value ?? Colors.white,
                     shape: BoxShape.circle,
+                    // 添加内部阴影效果
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                        color: Colors.black.withOpacity(0.2),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
                     ],
+                  ),
+                  // 使用AnimatedSwitcher添加平滑过渡
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    transitionBuilder: (child, animation) {
+                      return ScaleTransition(
+                        scale: animation,
+                        child: child,
+                      );
+                    },
+                    child: widget.isRecording
+                        ? Container(
+                            key: const ValueKey('recording'),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                          )
+                        : const SizedBox.shrink(
+                            key: ValueKey('idle'),
+                          ),
                   ),
                 ),
               ),
