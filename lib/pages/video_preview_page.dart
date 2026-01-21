@@ -78,6 +78,59 @@ class _VideoPreviewPageState extends State<VideoPreviewPage> {
     }
   }
 
+  /// 处理删除视频
+  Future<void> _handleDelete() async {
+    // 显示确认对话框
+    final confirm = await Get.dialog<bool>(
+      AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          '确认删除',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          '确定要删除这个视频吗？\n此操作无法撤销。',
+          style: TextStyle(color: Colors.grey[300]),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('取消'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            style: TextButton.styleFrom(
+              foregroundColor: Colors.red,
+            ),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        // 获取控制器
+        final controller = Get.find<VideoRecordingController>();
+        
+        // 删除视频
+        await controller.deleteVideo(_video.id);
+        
+        // 关闭预览页面
+        if (mounted) {
+          Get.back();
+        }
+      } catch (e) {
+        Get.snackbar(
+          '错误',
+          '删除视频失败: $e',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -198,14 +251,14 @@ class _VideoPreviewPageState extends State<VideoPreviewPage> {
                   children: [
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => Get.back(),
+                        onPressed: _handleDelete,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.grey[800],
+                          backgroundColor: Colors.red,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
-                        icon: const Icon(Icons.delete_outline),
-                        label: const Text('返回'),
+                        icon: const Icon(Icons.delete),
+                        label: const Text('删除'),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -213,12 +266,12 @@ class _VideoPreviewPageState extends State<VideoPreviewPage> {
                       child: ElevatedButton.icon(
                         onPressed: () => Get.back(),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
+                          backgroundColor: Colors.grey[800],
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                         ),
                         icon: const Icon(Icons.check),
-                        label: const Text('完成'),
+                        label: const Text('保留'),
                       ),
                     ),
                   ],
@@ -258,15 +311,22 @@ class _VideoPreviewPageState extends State<VideoPreviewPage> {
     final TextEditingController nameController =
         TextEditingController(text: _video.name);
 
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('重命名视频'),
+    Get.dialog(
+      AlertDialog(
+        backgroundColor: Colors.grey[900],
+        title: const Text(
+          '重命名视频',
+          style: TextStyle(color: Colors.white),
+        ),
         content: TextField(
           controller: nameController,
-          decoration: const InputDecoration(
+          style: const TextStyle(color: Colors.white),
+          decoration: InputDecoration(
             hintText: '请输入新的视频名称',
-            border: OutlineInputBorder(),
+            hintStyle: TextStyle(color: Colors.grey[500]),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
           ),
           autofocus: true,
         ),
@@ -278,14 +338,28 @@ class _VideoPreviewPageState extends State<VideoPreviewPage> {
           TextButton(
             onPressed: () async {
               if (nameController.text.isNotEmpty) {
-                final videoRecordingController = Get.find<
-                    VideoRecordingController>(); // 需要导入
-                await videoRecordingController.updateVideoName(
-                  _video.id,
-                  nameController.text,
-                );
-                Get.back();
-                setState(() {}); // 刷新UI
+                try {
+                  final controller = Get.find<VideoRecordingController>();
+                  await controller.updateVideoName(
+                    _video.id,
+                    nameController.text,
+                  );
+                  Get.back();
+                  setState(() {}); // 刷新UI
+                  Get.snackbar(
+                    '成功',
+                    '视频名称已更新',
+                    backgroundColor: Colors.green,
+                    colorText: Colors.white,
+                  );
+                } catch (e) {
+                  Get.snackbar(
+                    '错误',
+                    '更新视频名称失败: $e',
+                    backgroundColor: Colors.red,
+                    colorText: Colors.white,
+                  );
+                }
               }
             },
             child: const Text('确定'),
