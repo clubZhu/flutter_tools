@@ -13,10 +13,29 @@ class TikTokParserService {
   final Dio _dio = Dio();
 
   /// API配置
-  // TikWM API (免费，无需注册)
+  // 主API: TikWM API (免费，无需注册)
   static const String _tikwmApi = 'https://www.tikwm.com/api/';
 
-  // 备用API（可以替换为其他服务）
+  // 备用API列表（注意：这些API可能不稳定，建议定期更新）
+  static const List<Map<String, String>> _backupApis = [
+    {
+      'name': 'TikTokDown',
+      'url': 'https://tiktokdown.org/api',
+      'type': 'POST',
+    },
+    {
+      'name': 'SSSTik',
+      'url': 'https://ssstik.io/en',
+      'type': 'POST',
+    },
+    {
+      'name': 'TikWM (Backup)',
+      'url': 'https://tikwm.com/api/',
+      'type': 'GET',
+    },
+  ];
+
+  // 自定义API（可以替换为其他服务）
   String? _customApiEndpoint;
   String? _customApiKey;
 
@@ -41,47 +60,70 @@ class TikTokParserService {
           cleanedUrl.contains('iesdouyin')) {
         print('检测到抖音链接');
 
-        // 策略1: 如果是短链接，尝试展开后使用TikWM API
+        // 策略1: 如果是短链接，尝试展开
+        String targetUrl = cleanedUrl;
         if (cleanedUrl.contains('v.douyin')) {
           print('策略1: 尝试展开短链接');
           final expandedUrl = await _expandShortUrl(cleanedUrl);
           if (expandedUrl != null && expandedUrl != cleanedUrl) {
-            print('✓ 短链接展开成功，使用展开后的URL解析');
-            final result = await _parseWithTikWM(expandedUrl);
-            if (result != null) {
-              return result;
-            }
+            print('✓ 短链接展开成功');
+            targetUrl = expandedUrl;
           } else {
-            print('⚠️ 短链接展开失败');
+            print('⚠️ 短链接展开失败，使用原链接');
           }
         }
 
-        // 策略2: 直接尝试使用原URL（TikWM可能支持某些短链接）
-        print('策略2: 直接使用TikWM API解析原URL');
-        final result = await _parseWithTikWM(cleanedUrl);
+        // 策略2: 尝试所有可用的API（包括备用API）
+        print('策略2: 尝试使用多个API解析');
+
+        // 首先尝试主API (TikWM)
+        VideoInfo? result = await _parseWithTikWM(targetUrl);
         if (result != null) {
+          print('✓ 主API解析成功');
           return result;
         }
+        print('⚠️ 主API解析失败');
 
-        // 策略3: 如果URL中有分享文本，尝试提取更精确的URL
-        if (cleanedUrl.contains('v.douyin')) {
-          print('策略3: 短链接解析失败');
-          print('❌ 所有解析策略都失败');
-          print('');
-          print('📱 使用建议:');
-          print('   1. 在抖音App中打开视频');
-          print('   2. 点击分享按钮');
-          print('   3. 选择"复制链接"');
-          print('   4. 如果仍然失败，选择"分享到"->"微信"等应用后复制链接');
-          print('   5. 或者使用网页版抖音链接: https://www.douyin.com/video/视频ID');
+        // 尝试备用API
+        for (var api in _backupApis) {
+          print('尝试备用API: ${api['name']}');
+          result = await _parseWithBackupApi(targetUrl, api);
+          if (result != null) {
+            print('✓ ${api['name']} 解析成功');
+            return result;
+          }
+          print('⚠️ ${api['name']} 解析失败');
         }
+
+        // 所有策略都失败
+        print('❌ 所有解析策略都失败');
+        print('');
+        print('📱 使用建议:');
+        print('   1. 确保链接是从抖音App最新复制的');
+        print('   2. 尝试分享到微信后再复制链接');
+        print('   3. 或使用网页版链接: https://www.douyin.com/video/视频ID');
+        print('   4. 检查网络连接是否正常');
 
         return null;
       }
 
       // TikTok链接
       print('检测到TikTok链接');
-      return await _parseWithTikWM(cleanedUrl);
+      VideoInfo? result = await _parseWithTikWM(cleanedUrl);
+      if (result != null) {
+        return result;
+      }
+
+      // 尝试备用API
+      for (var api in _backupApis) {
+        print('尝试备用API: ${api['name']}');
+        result = await _parseWithBackupApi(cleanedUrl, api);
+        if (result != null) {
+          return result;
+        }
+      }
+
+      return null;
     } catch (e) {
       print('❌ 解析异常: $e');
       return null;
@@ -121,6 +163,27 @@ class TikTokParserService {
     return url;
   }
 
+  /// 清理抖音URL，移除所有查询参数，只保留视频ID
+  String _cleanDouyinUrl(String url) {
+    // 提取视频ID
+    final videoIdPattern = RegExp(r'/video/(\d+)');
+    final match = videoIdPattern.firstMatch(url);
+
+    if (match != null && match.group(1) != null) {
+      final videoId = match.group(1)!;
+      // 返回干净的URL
+      return 'https://www.douyin.com/video/$videoId';
+    }
+
+    // 如果没有视频ID，返回清理后的基础URL
+    final cleanUrl = _cleanUrl(url);
+    if (cleanUrl.contains('?')) {
+      return cleanUrl.substring(0, cleanUrl.indexOf('?'));
+    }
+
+    return cleanUrl;
+  }
+
   /// 使用TikWM API解析
   Future<VideoInfo?> _parseWithTikWM(String url) async {
     try {
@@ -132,6 +195,12 @@ class TikTokParserService {
           finalUrl = expandedUrl;
           print('抖音短链接已展开: $finalUrl');
         }
+      }
+
+      // 清理抖音URL - 移除所有查询参数
+      if (finalUrl.contains('douyin.com') || finalUrl.contains('iesdouyin.com')) {
+        finalUrl = _cleanDouyinUrl(finalUrl);
+        print('已清理抖音URL参数: $finalUrl');
       }
 
       print('开始解析抖音/TikTok链接: $finalUrl');
@@ -280,6 +349,135 @@ class TikTokParserService {
       return null;
     } catch (e) {
       print('自定义API请求失败: $e');
+      return null;
+    }
+  }
+
+  /// 使用备用API解析
+  Future<VideoInfo?> _parseWithBackupApi(String url, Map<String, String> api) async {
+    try {
+      final apiUrl = api['url']!;
+      final apiType = api['type']!;
+      final apiName = api['name']!;
+
+      // 清理抖音URL
+      String cleanUrl = url;
+      if (url.contains('douyin.com') || url.contains('iesdouyin.com')) {
+        cleanUrl = _cleanDouyinUrl(url);
+        print('  清理后的URL: $cleanUrl');
+      }
+
+      print('  正在调用 $apiName API...');
+      print('  API地址: $apiUrl');
+
+      final response = apiType == 'GET'
+          ? await _dio.get(
+              apiUrl,
+              queryParameters: {'url': cleanUrl},
+              options: Options(
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
+                },
+                receiveTimeout: const Duration(seconds: 15),
+                sendTimeout: const Duration(seconds: 10),
+              ),
+            )
+          : await _dio.post(
+              apiUrl,
+              data: {'url': cleanUrl},
+              options: Options(
+                headers: {
+                  'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15',
+                },
+                receiveTimeout: const Duration(seconds: 15),
+                sendTimeout: const Duration(seconds: 10),
+              ),
+            );
+
+      print('  $apiName 响应状态: ${response.statusCode}');
+
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data;
+        print('  $apiName 响应数据: ${data.toString().substring(0, data.toString().length > 200 ? 200 : data.toString().length)}...');
+
+        // 尝试从不同API格式中提取数据
+        Map<String, dynamic>? videoData;
+
+        // TikWM 格式
+        if (data['code'] == 0 && data['data'] != null) {
+          videoData = data['data'];
+        }
+        // LoveTik 格式
+        else if (data['video'] != null) {
+          videoData = data['video'];
+        }
+        // TikDown 格式
+        else if (data['data'] != null) {
+          videoData = data['data'];
+        }
+
+        if (videoData != null) {
+          final platform = url.contains('douyin') ||
+                  url.contains('iesdouyin') ||
+                  url.contains('v.douyin')
+              ? 'douyin'
+              : 'tiktok';
+
+          // 提取视频URL
+          String videoUrl = videoData['play'] ??
+              videoData['download_url'] ??
+              videoData['video_url'] ??
+              videoData['url'] ??
+              videoData['hdplay'] ??
+              '';
+
+          // 提取封面
+          String coverUrl = videoData['cover'] ??
+              videoData['origin_cover'] ??
+              videoData['thumbnail'] ??
+              videoData['cover_url'] ??
+              '';
+
+          // 提取作者
+          final authorData = videoData['author'] ?? {};
+          final author = authorData['nickname'] ??
+              authorData['unique_id'] ??
+              videoData['author_name'] ??
+              '未知作者';
+
+          if (videoUrl.isNotEmpty) {
+            print('  ✓ $apiName 成功获取视频信息');
+            return VideoInfo(
+              id: videoData['id'] ??
+                  videoData['aweme_id'] ??
+                  videoData['video_id'] ??
+                  '${platform}_${DateTime.now().millisecondsSinceEpoch}',
+              title: videoData['title'] ??
+                  videoData['desc'] ??
+                  videoData['description'] ??
+                  videoData['text'] ??
+                  '$platform视频',
+              description: videoData['desc'] ??
+                  videoData['description'] ??
+                  videoData['text'] ??
+                  '',
+              coverUrl: coverUrl,
+              videoUrl: videoUrl,
+              author: author,
+              platform: platform,
+              duration: videoData['duration'] != null
+                  ? (videoData['duration'] * 1000).toInt()
+                  : null,
+            );
+          } else {
+            print('  ⚠️ $apiName 返回数据中未找到视频URL');
+          }
+        }
+      }
+
+      return null;
+    } catch (e) {
+      print('  ⚠️ ${api['name']} API请求失败: $e');
       return null;
     }
   }
@@ -510,6 +708,10 @@ class TikTokParserService {
         } else {
           print('⚠️ 短链接展开失败，尝试直接解析原链接');
         }
+
+        // 清理抖音URL - 移除所有查询参数
+        finalUrl = _cleanDouyinUrl(finalUrl);
+        print('📍 清理后的URL: $finalUrl');
       }
 
       print('📍 最终解析URL: $finalUrl');

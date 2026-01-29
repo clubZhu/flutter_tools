@@ -56,14 +56,27 @@ class VideoDownloadService {
           return videoInfo;
         }
 
-        // API失败时返回提示
+        // API失败时返回详细提示
+        final platformName = platform == 'douyin' ? '抖音' : 'TikTok';
         return VideoInfo(
           id: 'error_${DateTime.now().millisecondsSinceEpoch}',
-          title: '解析失败',
-          description: '无法解析${platform == 'douyin' ? '抖音' : 'TikTok'}视频。\n\n可能原因：\n1. 链接无效或已删除\n2. API服务暂时不可用\n3. 网络连接问题\n\n请检查链接后重试，或尝试其他视频。',
-          coverUrl: 'https://via.placeholder.com/400x600?text=Parse+Error',
+          title: '$platformName视频解析失败',
+          description: '无法解析$platformName视频\n\n'
+              '可能原因：\n'
+              '1. 链接无效或已删除\n'
+              '2. API服务暂时不可用或超时\n'
+              '3. 网络连接问题\n'
+              '4. 短链接展开失败\n'
+              '5. 视频有地区限制或私密视频\n\n'
+              '解决建议：\n'
+              '• 确保链接是从App最新复制的\n'
+              '• 尝试分享到微信后再复制链接\n'
+              '• 使用完整链接而非短链接\n'
+              '• 检查网络连接\n'
+              '• 稍后重试或尝试其他视频',
+          coverUrl: 'https://via.placeholder.com/400x600?text=$platformName+Parse+Error',
           videoUrl: '',
-          author: '未知',
+          author: '解析失败',
           platform: platform,
           duration: null,
         );

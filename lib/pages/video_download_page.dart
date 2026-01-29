@@ -250,16 +250,37 @@ class _VideoDownloadPageState extends State<VideoDownloadPage> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.red[200]!),
                 ),
-                child: Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.error_outline, color: Colors.red[700]),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _errorMessage!,
-                        style: TextStyle(color: Colors.red[700]),
-                      ),
+                    Row(
+                      children: [
+                        Icon(Icons.error_outline, color: Colors.red[700]),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
                     ),
+                    if (_errorMessage!.contains('抖音')) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '💡 抖音链接解析提示：',
+                        style: TextStyle(color: Colors.red[700], fontSize: 12, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '• 确保链接是从抖音App最新复制的\n'
+                        '• 尝试在抖音App中分享到微信后再复制\n'
+                        '• 短链接可能展开失败，建议使用完整链接\n'
+                        '• 检查网络连接是否正常\n'
+                        '• 如果仍然失败，可能是API服务暂时不可用',
+                        style: TextStyle(color: Colors.red[600], fontSize: 11, height: 1.5),
+                      ),
+                    ],
                   ],
                 ),
               ),
