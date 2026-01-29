@@ -1,5 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:calculator_app/models/video_info.dart';
+import 'package:html/parser.dart' as html_parser;
+import 'package:html/dom.dart' as html_dom;
 
 /// TikTok/抖音视频解析服务
 /// 使用第三方API进行解析
@@ -19,14 +21,19 @@ class TikTokParserService {
   // 备用API列表（注意：这些API可能不稳定，建议定期更新）
   static const List<Map<String, String>> _backupApis = [
     {
-      'name': 'TikTokDown',
-      'url': 'https://tiktokdown.org/api',
-      'type': 'POST',
+      'name': 'OGeek',
+      'url': 'https://api.oick.cn/douyin/api.php',
+      'type': 'GET',
     },
     {
-      'name': 'SSSTik',
-      'url': 'https://ssstik.io/en',
-      'type': 'POST',
+      'name': 'XiaoBing',
+      'url': 'https://api.xingping.vip/api/douyin.php',
+      'type': 'GET',
+    },
+    {
+      'name': 'QuickSo',
+      'url': 'https://api.quickso.cn/api/douyin',
+      'type': 'GET',
     },
     {
       'name': 'TikWM (Backup)',
@@ -94,6 +101,15 @@ class TikTokParserService {
           }
           print('⚠️ ${api['name']} 解析失败');
         }
+
+        // 策略3: 尝试HTML爬虫解析（最后的后备方案）
+        print('策略3: 尝试HTML爬虫解析');
+        result = await _parseWithHtmlScraper(cleanedUrl);
+        if (result != null) {
+          print('✓ HTML爬虫解析成功');
+          return result;
+        }
+        print('⚠️ HTML爬虫解析失败');
 
         // 所有策略都失败
         print('❌ 所有解析策略都失败');
@@ -380,6 +396,7 @@ class TikTokParserService {
                 },
                 receiveTimeout: const Duration(seconds: 15),
                 sendTimeout: const Duration(seconds: 10),
+                validateStatus: (status) => status != null && status < 500,
               ),
             )
           : await _dio.post(
@@ -391,6 +408,7 @@ class TikTokParserService {
                 },
                 receiveTimeout: const Duration(seconds: 15),
                 sendTimeout: const Duration(seconds: 10),
+                validateStatus: (status) => status != null && status < 500,
               ),
             );
 
@@ -407,11 +425,15 @@ class TikTokParserService {
         if (data['code'] == 0 && data['data'] != null) {
           videoData = data['data'];
         }
-        // LoveTik 格式
-        else if (data['video'] != null) {
-          videoData = data['video'];
+        // OGeek/XiaoBing 格式 (code: 1 表示成功)
+        else if (data['code'] == 1 && data['data'] != null) {
+          videoData = data['data'];
         }
-        // TikDown 格式
+        // 直接返回视频数据的格式
+        else if (data['url'] != null || data['video_url'] != null) {
+          videoData = data;
+        }
+        // QuickSo 等其他格式
         else if (data['data'] != null) {
           videoData = data['data'];
         }
@@ -423,27 +445,41 @@ class TikTokParserService {
               ? 'douyin'
               : 'tiktok';
 
-          // 提取视频URL
-          String videoUrl = videoData['play'] ??
-              videoData['download_url'] ??
+          // 提取视频URL（尝试多个字段）
+          String videoUrl = videoData['url'] ??
               videoData['video_url'] ??
-              videoData['url'] ??
+              videoData['play'] ??
+              videoData['download_url'] ??
               videoData['hdplay'] ??
               '';
 
           // 提取封面
           String coverUrl = videoData['cover'] ??
+              videoData['pic'] ??
               videoData['origin_cover'] ??
               videoData['thumbnail'] ??
               videoData['cover_url'] ??
               '';
 
+          // 提取标题
+          String title = videoData['title'] ??
+              videoData['desc'] ??
+              videoData['text'] ??
+              videoData['description'] ??
+              '$platform视频';
+
           // 提取作者
-          final authorData = videoData['author'] ?? {};
-          final author = authorData['nickname'] ??
-              authorData['unique_id'] ??
-              videoData['author_name'] ??
-              '未知作者';
+          String author = '未知作者';
+          if (videoData['author'] != null) {
+            if (videoData['author'] is Map) {
+              author = videoData['author']['nickname'] ??
+                  videoData['author']['unique_id'] ??
+                  '未知作者';
+            } else if (videoData['author'] is String) {
+              author = videoData['author'];
+            }
+          }
+          author = videoData['author_name'] ?? videoData['nickname'] ?? author;
 
           if (videoUrl.isNotEmpty) {
             print('  ✓ $apiName 成功获取视频信息');
@@ -452,11 +488,7 @@ class TikTokParserService {
                   videoData['aweme_id'] ??
                   videoData['video_id'] ??
                   '${platform}_${DateTime.now().millisecondsSinceEpoch}',
-              title: videoData['title'] ??
-                  videoData['desc'] ??
-                  videoData['description'] ??
-                  videoData['text'] ??
-                  '$platform视频',
+              title: title,
               description: videoData['desc'] ??
                   videoData['description'] ??
                   videoData['text'] ??
@@ -478,6 +510,122 @@ class TikTokParserService {
       return null;
     } catch (e) {
       print('  ⚠️ ${api['name']} API请求失败: $e');
+      return null;
+    }
+  }
+
+  /// 使用HTML爬虫解析（后备方案）
+  /// 直接抓取抖音网页并提取视频信息
+  Future<VideoInfo?> _parseWithHtmlScraper(String url) async {
+    try {
+      print('  开始HTML爬虫解析...');
+
+      // 清理URL
+      String cleanUrl = url;
+      if (url.contains('douyin.com') || url.contains('iesdouyin.com')) {
+        cleanUrl = _cleanDouyinUrl(url);
+      }
+
+      print('  抓取网页: $cleanUrl');
+
+      final response = await _dio.get(
+        cleanUrl,
+        options: Options(
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8',
+            'Referer': 'https://www.douyin.com/',
+          },
+          receiveTimeout: const Duration(seconds: 20),
+          sendTimeout: const Duration(seconds: 15),
+          validateStatus: (status) => status != null && status < 500,
+          followRedirects: true,
+          maxRedirects: 10,
+        ),
+      );
+
+      if (response.statusCode != 200 || response.data == null) {
+        print('  ⚠️ 无法获取网页内容');
+        return null;
+      }
+
+      print('  ✓ 网页抓取成功');
+
+      // 解析HTML
+      final document = html_parser.parse(response.data);
+
+      // 尝试从页面中提取视频数据（多种格式）
+      String? videoUrl;
+      String? coverUrl;
+      String? title;
+      String? author;
+      String? videoId;
+
+      // 方法1: 从script标签中提取JSON数据
+      final scripts = document.getElementsByTagName('script');
+      for (var script in scripts) {
+        final text = script.text;
+        if (text.contains('videoUrl') || text.contains('playAddr')) {
+          // 尝试提取视频URL
+          final videoUrlMatch = RegExp(r'"playAddr":"([^"]+)"').firstMatch(text);
+          if (videoUrlMatch != null && videoUrlMatch.group(1) != null) {
+            videoUrl = videoUrlMatch.group(1)!.replaceAll('\\u002F', '/');
+            break;
+          }
+
+          final urlMatch = RegExp(r'"url":"([^"]+\.mp3[^"]*)"').firstMatch(text);
+          if (urlMatch != null && urlMatch.group(1) != null) {
+            videoUrl = urlMatch.group(1)!.replaceAll('\\u002F', '/');
+            break;
+          }
+        }
+      }
+
+      // 方法2: 从meta标签提取
+      if (videoUrl == null || videoUrl.isEmpty) {
+        final videoMeta = document.querySelector('meta[property="og:video"]');
+        if (videoMeta != null) {
+          videoUrl = videoMeta.attributes['content'];
+        }
+      }
+
+      // 提取封面
+      final imageMeta = document.querySelector('meta[property="og:image"]');
+      if (imageMeta != null) {
+        coverUrl = imageMeta.attributes['content'];
+      }
+
+      // 提取标题
+      final titleMeta = document.querySelector('meta[property="og:title"]');
+      if (titleMeta != null) {
+        title = titleMeta.attributes['content'];
+      }
+
+      // 提取视频ID
+      final idMatch = RegExp(r'/video/(\d+)').firstMatch(cleanUrl);
+      if (idMatch != null && idMatch.group(1) != null) {
+        videoId = idMatch.group(1);
+      }
+
+      if (videoUrl != null && videoUrl.isNotEmpty) {
+        print('  ✓ HTML爬虫成功提取视频URL');
+        return VideoInfo(
+          id: videoId ?? 'douyin_${DateTime.now().millisecondsSinceEpoch}',
+          title: title ?? '抖音视频',
+          description: '通过HTML爬虫解析',
+          coverUrl: coverUrl ?? '',
+          videoUrl: videoUrl,
+          author: author ?? '未知作者',
+          platform: 'douyin',
+          duration: null,
+        );
+      }
+
+      print('  ⚠️ HTML爬虫未能提取到视频URL');
+      return null;
+    } catch (e) {
+      print('  ⚠️ HTML爬虫解析失败: $e');
       return null;
     }
   }
