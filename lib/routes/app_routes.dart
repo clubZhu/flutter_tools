@@ -8,6 +8,7 @@ class AppRoutes {
   static const String HTML_TEST = '/html-test';
   static const String SETTINGS = '/settings';
   static const String VIDEO_DOWNLOAD = '/video-download';
+  static const String VIDEO_DOWNLOADED = '/video-downloaded';
   static const String WEB_SERVICE = '/web-service';
   static const String VIDEO_RECORDING = '/video-recording';
   static const String VIDEO_PREVIEW = '/video-preview';

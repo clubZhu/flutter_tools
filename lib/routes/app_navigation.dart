@@ -40,6 +40,11 @@ class AppNavigation {
     Get.toNamed(AppRoutes.VIDEO_DOWNLOAD);
   }
 
+  /// 跳转到视频已下载页面
+  static void goToVideoDownloaded() {
+    Get.toNamed(AppRoutes.VIDEO_DOWNLOADED);
+  }
+
   /// 跳转到 WebService 文件传输页面
   static void goToWebService() {
     Get.toNamed(AppRoutes.WEB_SERVICE);

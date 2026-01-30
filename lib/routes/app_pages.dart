@@ -8,10 +8,12 @@ import 'package:calculator_app/pages/item_list_page.dart';
 import 'package:calculator_app/pages/html_test_page.dart';
 import 'package:calculator_app/pages/settings_page.dart';
 import 'package:calculator_app/pages/video_download_page.dart';
+import 'package:calculator_app/features/video_download/pages/video_downloaded_page.dart';
 import 'package:calculator_app/pages/web_service_page.dart';
 import 'package:calculator_app/pages/video_recording_page.dart';
 import 'package:calculator_app/pages/video_preview_page.dart';
 import 'package:calculator_app/pages/video_history_page.dart';
+import 'package:calculator_app/controllers/video_recording_controller.dart';
 
 /// 路由页面配置
 class AppPages {
@@ -49,6 +51,10 @@ class AppPages {
       page: () => const VideoDownloadPage(),
     ),
     GetPage(
+      name: AppRoutes.VIDEO_DOWNLOADED,
+      page: () => const VideoDownloadedPage(),
+    ),
+    GetPage(
       name: AppRoutes.WEB_SERVICE,
       page: () => const WebServicePage(),
     ),
@@ -63,6 +69,9 @@ class AppPages {
     GetPage(
       name: AppRoutes.VIDEO_HISTORY,
       page: () => const VideoHistoryPage(),
+      binding: BindingsBuilder(() => {
+        Get.lazyPut<VideoRecordingController>(() => VideoRecordingController()),
+      }),
     ),
   ];
 }

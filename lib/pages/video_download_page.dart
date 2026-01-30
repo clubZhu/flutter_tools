@@ -6,6 +6,9 @@ import 'package:video_player/video_player.dart';
 import 'package:dio/dio.dart';
 import 'package:calculator_app/models/video_info.dart';
 import 'package:calculator_app/services/video_download_service.dart';
+import 'package:calculator_app/routes/app_navigation.dart';
+import 'package:calculator_app/features/video_download/services/download_history_service.dart';
+import 'package:calculator_app/features/video_download/models/downloaded_video_model.dart';
 
 /// 视频下载页面
 class VideoDownloadPage extends StatefulWidget {
@@ -17,6 +20,7 @@ class VideoDownloadPage extends StatefulWidget {
 
 class _VideoDownloadPageState extends State<VideoDownloadPage> {
   final VideoDownloadService _downloadService = VideoDownloadService();
+  final DownloadHistoryService _historyService = DownloadHistoryService();
   final TextEditingController _urlController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -29,6 +33,17 @@ class _VideoDownloadPageState extends State<VideoDownloadPage> {
   CancelToken? _cancelToken;
   String? _errorMessage;
   File? _downloadedFile; // 下载的文件
+
+  @override
+  void initState() {
+    super.initState();
+    _initHistoryService();
+  }
+
+  /// 初始化下载历史服务
+  Future<void> _initHistoryService() async {
+    await _historyService.init();
+  }
 
   @override
   void dispose() {
@@ -147,6 +162,23 @@ class _VideoDownloadPageState extends State<VideoDownloadPage> {
       );
 
       if (file != null) {
+        // 添加到下载历史
+        final fileSize = await file.length();
+        final downloadedVideo = DownloadedVideoModel(
+          id: '${_videoInfo!.platform ?? 'unknown'}_${DateTime.now().millisecondsSinceEpoch}',
+          title: _videoInfo!.title,
+          author: _videoInfo!.author,
+          platform: _videoInfo!.platform ?? 'unknown',
+          description: _videoInfo!.description,
+          coverUrl: _videoInfo!.coverUrl,
+          videoUrl: _videoInfo!.videoUrl,
+          localPath: file.path,
+          fileSize: fileSize,
+          downloadedAt: DateTime.now(),
+          duration: _videoInfo!.duration,
+        );
+        await _historyService.addVideo(downloadedVideo);
+
         setState(() {
           _isDownloading = false;
           _downloadedFile = file;
@@ -157,6 +189,10 @@ class _VideoDownloadPageState extends State<VideoDownloadPage> {
           '视频已下载完成',
           snackPosition: SnackPosition.BOTTOM,
           duration: const Duration(seconds: 2),
+          mainButton: TextButton(
+            onPressed: () => AppNavigation.goToVideoDownloaded(),
+            child: const Text('查看'),
+          ),
         );
       } else {
         setState(() {
@@ -198,16 +234,11 @@ class _VideoDownloadPageState extends State<VideoDownloadPage> {
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: const Text('视频下载'),
         actions: [
-          // 历史记录按钮
+          // 已下载按钮
           IconButton(
-            icon: const Icon(Icons.history),
-            onPressed: () {
-              Get.snackbar(
-                '提示',
-                '历史记录功能开发中',
-                snackPosition: SnackPosition.BOTTOM,
-              );
-            },
+            icon: const Icon(Icons.download_done),
+            onPressed: () => AppNavigation.goToVideoDownloaded(),
+            tooltip: '已下载',
           ),
         ],
       ),
