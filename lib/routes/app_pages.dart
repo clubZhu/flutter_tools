@@ -11,7 +11,7 @@ import 'package:calculator_app/pages/video_download_page.dart';
 import 'package:calculator_app/features/video_download/pages/video_downloaded_page.dart';
 import 'package:calculator_app/pages/web_service_page.dart';
 import 'package:calculator_app/pages/video_recording_page.dart';
-import 'package:calculator_app/pages/video_preview_page.dart';
+import 'package:calculator_app/pages/common_video_preview_page.dart';
 import 'package:calculator_app/pages/video_history_page.dart';
 import 'package:calculator_app/controllers/video_recording_controller.dart';
 
@@ -60,17 +60,17 @@ class AppPages {
     ),
     GetPage(
       name: AppRoutes.VIDEO_RECORDING,
-      page: () => VideoRecordingPage(),
+      page: () => const VideoRecordingPage(),
     ),
     GetPage(
       name: AppRoutes.VIDEO_PREVIEW,
-      page: () => const VideoPreviewPage(),
+      page: () => const CommonVideoPreviewPage(),
     ),
     GetPage(
       name: AppRoutes.VIDEO_HISTORY,
       page: () => const VideoHistoryPage(),
-      binding: BindingsBuilder(() => {
-        Get.lazyPut<VideoRecordingController>(() => VideoRecordingController()),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<VideoRecordingController>(() => VideoRecordingController());
       }),
     ),
   ];
