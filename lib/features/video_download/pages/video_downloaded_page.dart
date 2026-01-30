@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import 'dart:io';
 import '../services/download_history_service.dart';
@@ -396,152 +397,158 @@ class _VideoDownloadedPageState extends State<VideoDownloadedPage>
       ),
       child: Column(
         children: [
-          // 封面区域
-          InkWell(
-            onTap: () => _previewVideo(video),
-            borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(16),
-              topRight: Radius.circular(16),
-            ),
-            child: ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(16),
-                topRight: Radius.circular(16),
-              ),
-              child: Stack(
-                children: [
-                  // 封面图
-                  AspectRatio(
-                    aspectRatio: 16 / 9,
-                    child: video.coverUrl.isNotEmpty
-                        ? Image.network(
-                            video.coverUrl,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildDefaultCover();
-                            },
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-                              return Container(
-                                color: Colors.black.withOpacity(0.3),
-                                child: Center(
-                                  child: CircularProgressIndicator(
-                                    value: loadingProgress.expectedTotalBytes != null
-                                        ? loadingProgress.cumulativeBytesLoaded /
-                                            loadingProgress.expectedTotalBytes!
-                                        : null,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white.withOpacity(0.7),
+          // 封面区域 - 添加Hero标签
+          Hero(
+            tag: 'video_cover_${video.id}',
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _previewVideo(video),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(16),
+                    topRight: Radius.circular(16),
+                  ),
+                  child: Stack(
+                    children: [
+                      // 封面图
+                      AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: video.coverUrl.isNotEmpty
+                            ? Image.network(
+                                video.coverUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _buildDefaultCover();
+                                },
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return Container(
+                                    color: Colors.black.withOpacity(0.3),
+                                    child: Center(
+                                      child: CircularProgressIndicator(
+                                        value: loadingProgress.expectedTotalBytes != null
+                                            ? loadingProgress.cumulativeBytesLoaded /
+                                                loadingProgress.expectedTotalBytes!
+                                            : null,
+                                        valueColor: AlwaysStoppedAnimation<Color>(
+                                          Colors.white.withOpacity(0.7),
+                                        ),
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              );
-                            },
-                          )
-                        : _buildDefaultCover(),
-                  ),
-                  // 播放按钮覆盖层
-                  Container(
-                    color: Colors.black.withOpacity(0.2),
-                    child: Center(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.3),
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.5),
-                            width: 2,
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow,
-                          color: Colors.white,
-                          size: 32,
-                        ),
+                                  );
+                                },
+                              )
+                            : _buildDefaultCover(),
                       ),
-                    ),
-                  ),
-                  // 时长标签
-                  if (video.duration != null)
-                    Positioned(
-                      bottom: 8,
-                      right: 8,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.7),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          video.durationFormatted,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                      // 播放按钮覆盖层
+                      Container(
+                        color: Colors.black.withOpacity(0.2),
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.3),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.5),
+                                width: 2,
+                              ),
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow,
+                              color: Colors.white,
+                              size: 32,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                  // 平台标签
-                  Positioned(
-                    top: 8,
-                    left: 8,
-                    child: _buildPlatformChip(video.platform),
-                  ),
-                  // 更多菜单
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: PopupMenuButton<String>(
-                      onSelected: (value) => _handleVideoMenu(value, video),
-                      icon: Icon(
-                        Icons.more_vert,
-                        color: Colors.white.withOpacity(0.9),
-                        size: 20,
+                      // 时长标签
+                      if (video.duration != null)
+                        Positioned(
+                          bottom: 8,
+                          right: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.7),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              video.durationFormatted,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      // 平台标签
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: _buildPlatformChip(video.platform),
                       ),
-                      color: Colors.white.withOpacity(0.95),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                      // 更多菜单
+                      Positioned(
+                        top: 8,
+                        right: 8,
+                        child: PopupMenuButton<String>(
+                          onSelected: (value) => _handleVideoMenu(value, video),
+                          icon: Icon(
+                            Icons.more_vert,
+                            color: Colors.white.withOpacity(0.9),
+                            size: 20,
+                          ),
+                          color: Colors.white.withOpacity(0.95),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          itemBuilder: (context) => [
+                            const PopupMenuItem(
+                              value: 'preview',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.play_arrow, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('预览'),
+                                ],
+                              ),
+                            ),
+                            const PopupMenuItem(
+                              value: 'info',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info_outline, size: 18),
+                                  SizedBox(width: 8),
+                                  Text('详情'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'delete',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, size: 18, color: Colors.red),
+                                  const SizedBox(width: 8),
+                                  Text('删除', style: TextStyle(color: Colors.red)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      itemBuilder: (context) => [
-                        const PopupMenuItem(
-                          value: 'preview',
-                          child: Row(
-                            children: [
-                              Icon(Icons.play_arrow, size: 18),
-                              SizedBox(width: 8),
-                              Text('预览'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'info',
-                          child: Row(
-                            children: [
-                              Icon(Icons.info_outline, size: 18),
-                              SizedBox(width: 8),
-                              Text('详情'),
-                            ],
-                          ),
-                        ),
-                        PopupMenuItem(
-                          value: 'delete',
-                          child: Row(
-                            children: [
-                              Icon(Icons.delete, size: 18, color: Colors.red),
-                              const SizedBox(width: 8),
-                              Text('删除', style: TextStyle(color: Colors.red)),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -737,81 +744,15 @@ class _VideoDownloadedPageState extends State<VideoDownloadedPage>
   }
 
   /// 分享视频
-  void _shareVideo(DownloadedVideoModel video) {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.share_rounded, color: Colors.blue),
-            SizedBox(width: 12),
-            Text(
-              '分享视频',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.link, color: Colors.blue),
-              title: const Text('分享视频链接'),
-              subtitle: Text(video.videoUrl, maxLines: 1, overflow: TextOverflow.ellipsis),
-              onTap: () {
-                Get.back();
-                Clipboard.setData(ClipboardData(text: video.videoUrl));
-                Get.snackbar(
-                  '已复制',
-                  '视频链接已复制到剪贴板',
-                  backgroundColor: Colors.green.withOpacity(0.9),
-                  colorText: Colors.white,
-                  duration: const Duration(seconds: 2),
-                );
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.title, color: Colors.orange),
-              title: const Text('分享标题和链接'),
-              subtitle: Text(video.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-              onTap: () {
-                Get.back();
-                final shareText = '${video.title}\n\n${video.videoUrl}';
-                Clipboard.setData(ClipboardData(text: shareText));
-                Get.snackbar(
-                  '已复制',
-                  '标题和链接已复制到剪贴板',
-                  backgroundColor: Colors.green.withOpacity(0.9),
-                  colorText: Colors.white,
-                  duration: const Duration(seconds: 2),
-                );
-              },
-            ),
-            const Divider(),
-            ListTile(
-              leading: const Icon(Icons.video_library, color: Colors.purple),
-              title: const Text('查看视频详情'),
-              onTap: () {
-                Get.back();
-                _showInfoDialog(video);
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('取消'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _shareVideo(DownloadedVideoModel video) async {
+    try {
+      await Share.shareXFiles(
+        [XFile(video.localPath)],
+        text: '分享我的录制视频',
+      );
+    } catch (e) {
+      Get.snackbar('错误', '分享失败: $e');
+    }
   }
 
   /// 显示信息对话框
@@ -1376,6 +1317,7 @@ class _VideoPreviewPageState extends State<_VideoPreviewPage> {
   VideoPlayerController? _controller;
   bool _isInitialized = false;
   bool _hasError = false;
+  bool _showControls = false;
 
   @override
   void initState() {
@@ -1389,10 +1331,20 @@ class _VideoPreviewPageState extends State<_VideoPreviewPage> {
       if (await file.exists()) {
         _controller = VideoPlayerController.file(file);
         await _controller!.initialize();
+
+        // 添加监听器
+        _controller!.addListener(() {
+          if (mounted) {
+            setState(() {});
+          }
+        });
+
         if (mounted) {
           setState(() {
             _isInitialized = true;
           });
+          // 自动播放
+          _controller!.play();
         }
       } else {
         setState(() {
@@ -1409,78 +1361,259 @@ class _VideoPreviewPageState extends State<_VideoPreviewPage> {
 
   @override
   void dispose() {
+    _controller?.removeListener(() {});
     _controller?.dispose();
     super.dispose();
+  }
+
+  String _formatDuration(Duration duration) {
+    String twoDigits(int n) => n.toString().padLeft(2, '0');
+    final minutes = twoDigits(duration.inMinutes.remainder(60));
+    final seconds = twoDigits(duration.inSeconds.remainder(60));
+    return '$minutes:$seconds';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.video.title),
-        centerTitle: true,
-      ),
-      body: Center(
-        child: _hasError
-            ? _buildErrorView()
-            : !_isInitialized
-                ? const CircularProgressIndicator()
-                : _buildVideoPlayer(),
-      ),
-    );
-  }
+      backgroundColor: Colors.black,
+      body: AppBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              // 自定义AppBar
+              _buildAppBar(),
 
-  Widget _buildErrorView() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Icon(Icons.error_outline, size: 64, color: Colors.red),
-        const SizedBox(height: 16),
-        const Text('视频加载失败'),
-        const SizedBox(height: 8),
-        Text(
-          '文件不存在: ${widget.video.localPath}',
-          style: TextStyle(color: Colors.grey[600]),
-          textAlign: TextAlign.center,
+              // 视频播放区域
+              Expanded(
+                child: Hero(
+                  tag: 'video_cover_${widget.video.id}',
+                  child: _hasError
+                      ? _buildErrorView()
+                      : !_isInitialized
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : _buildVideoPlayer(),
+                ),
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildVideoPlayer() {
-    return AspectRatio(
-      aspectRatio: _controller!.value.aspectRatio,
-      child: Stack(
-        alignment: Alignment.center,
+  Widget _buildAppBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+      child: Row(
         children: [
-          VideoPlayer(_controller!),
-          _buildControls(),
+          IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            onPressed: () => Get.back(),
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.2),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  widget.video.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                Text(
+                  widget.video.author,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.7),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.share, color: Colors.white),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: widget.video.videoUrl));
+              Get.snackbar(
+                '已复制',
+                '视频链接已复制到剪贴板',
+                backgroundColor: Colors.green.withOpacity(0.9),
+                colorText: Colors.white,
+              );
+            },
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.2),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildControls() {
+  Widget _buildErrorView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.error_outline,
+              size: 64,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            '视频加载失败',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '文件不存在或已被删除',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.white.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVideoPlayer() {
     return GestureDetector(
       onTap: () {
         setState(() {
-          if (_controller!.value.isPlaying) {
-            _controller!.pause();
-          } else {
-            _controller!.play();
-          }
+          _showControls = !_showControls;
         });
       },
-      child: Container(
-        color: Colors.black26,
-        child: Center(
-          child: Icon(
-            _controller!.value.isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-            size: 64,
-            color: Colors.white,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 视频播放器
+          Center(
+            child: AspectRatio(
+              aspectRatio: _controller!.value.aspectRatio,
+              child: VideoPlayer(_controller!),
+            ),
           ),
-        ),
+
+          // 底部控制栏和进度条
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: AnimatedOpacity(
+              opacity: _showControls ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 进度条
+                    VideoProgressIndicator(
+                      _controller!,
+                      allowScrubbing: true,
+                      colors: VideoProgressColors(
+                        playedColor: Colors.blue,
+                        bufferedColor: Colors.white.withOpacity(0.3),
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // 控制按钮行
+                    Row(
+                      children: [
+                        // 播放/暂停按钮
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (_controller!.value.isPlaying) {
+                                _controller!.pause();
+                              } else {
+                                _controller!.play();
+                              }
+                            });
+                          },
+                          child: Icon(
+                            _controller!.value.isPlaying
+                                ? Icons.pause_circle_filled
+                                : Icons.play_circle_filled,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+
+                        // 时间显示
+                        Expanded(
+                          child: Text(
+                            '${_formatDuration(_controller!.value.position)} / ${_formatDuration(_controller!.value.duration)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 暂停指示器（仅在暂停且不显示控制栏时显示）
+          if (!_controller!.value.isPlaying && !_showControls)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow,
+                  color: Colors.white,
+                  size: 32,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
