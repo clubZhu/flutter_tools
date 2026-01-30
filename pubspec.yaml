@@ -79,6 +79,9 @@ dependencies:
   # Camera for video recording
   camera: ^0.10.5+5
 
+  # Video Thumbnail for generating video thumbnails
+  video_thumbnail: ^0.5.3
+
   # Share Plus for sharing videos
   share_plus: ^7.2.1
 

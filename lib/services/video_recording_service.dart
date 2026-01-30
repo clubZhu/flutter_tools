@@ -4,6 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:uuid/uuid.dart';
+import 'package:video_thumbnail/video_thumbnail.dart' as vt;
 import '../models/video_recording_model.dart';
 import 'video_database_service.dart';
 
@@ -129,7 +130,7 @@ class VideoRecordingService {
       final videoRecording = VideoRecordingModel(
         id: const Uuid().v4(),
         filePath: videoFile.path,
-        thumbnailPath: '', // TODO: 生成缩略图
+        thumbnailPath: await _generateThumbnail(videoFile.path),
         name: '视频_${DateTime.now().millisecondsSinceEpoch}',
         duration: _recordingDuration,
         fileSize: fileSize,
@@ -208,6 +209,47 @@ class VideoRecordingService {
   void updateRecordingDuration() {
     if (_isRecording) {
       _recordingDuration++;
+    }
+  }
+
+  /// 生成视频缩略图
+  Future<String> _generateThumbnail(String videoPath) async {
+    try {
+      // 获取应用文档目录
+      final appDir = await getApplicationDocumentsDirectory();
+      final thumbnailDir = Directory('${appDir.path}/thumbnails');
+
+      // 创建缩略图目录
+      if (!await thumbnailDir.exists()) {
+        await thumbnailDir.create(recursive: true);
+      }
+
+      // 生成缩略图文件名
+      final fileName = path.basenameWithoutExtension(videoPath);
+      final thumbnailPath = '${thumbnailDir.path}/$fileName.jpg';
+
+      // 生成缩略图
+      final uint8list = await vt.VideoThumbnail.thumbnailData(
+        video: videoPath,
+        imageFormat: vt.ImageFormat.JPEG,
+        maxWidth: 320,
+        quality: 75,
+      );
+
+      // 检查是否成功生成
+      if (uint8list == null || uint8list.isEmpty) {
+        print('缩略图生成失败: 返回数据为空');
+        return '';
+      }
+
+      // 保存缩略图
+      final thumbnailFile = File(thumbnailPath);
+      await thumbnailFile.writeAsBytes(uint8list);
+
+      return thumbnailPath;
+    } catch (e) {
+      print('生成缩略图失败: $e');
+      return ''; // 失败时返回空字符串
     }
   }
 }

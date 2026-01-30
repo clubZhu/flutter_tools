@@ -29,8 +29,6 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
                   }
                   return Column(
                     children: [
-                      // 统计栏
-                      _buildStatisticsBar(),
                       // 视频列表
                       Expanded(
                         child: _buildVideoList(),
@@ -256,35 +254,7 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
                       // 封面图
                       AspectRatio(
                         aspectRatio: 16 / 9,
-                        child: video.thumbnailPath.isNotEmpty
-                            ? FutureBuilder<bool>(
-                                future: File(video.thumbnailPath).exists(),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState == ConnectionState.waiting) {
-                                    return Container(
-                                      color: Colors.black.withOpacity(0.3),
-                                      child: const Center(
-                                        child: CircularProgressIndicator(
-                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                                        ),
-                                      ),
-                                    );
-                                  }
-
-                                  if (snapshot.hasData && snapshot.data == true) {
-                                    return Image.file(
-                                      File(video.thumbnailPath),
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) {
-                                        return _buildDefaultCover();
-                                      },
-                                    );
-                                  }
-
-                                  return _buildDefaultCover();
-                                },
-                              )
-                            : _buildDefaultCover(),
+                        child: _buildVideoThumbnail(video),
                       ),
 
                       // 时长标签
@@ -421,6 +391,35 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
           ),
         ],
       ),
+    );
+  }
+
+  /// 构建视频缩略图
+  Widget _buildVideoThumbnail(VideoRecordingModel video) {
+    // 如果没有缩略图路径，直接显示默认封面
+    if (video.thumbnailPath.isEmpty) {
+      return _buildDefaultCover();
+    }
+
+    // 使用 Image.file 直接加载，让 errorBuilder 处理错误
+    return Image.file(
+      File(video.thumbnailPath),
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        // 图片加载失败（文件不存在或格式错误）时显示默认封面
+        return _buildDefaultCover();
+      },
+      frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+        if (wasSynchronouslyLoaded) {
+          return child;
+        }
+        return AnimatedOpacity(
+          opacity: frame == null ? 0 : 1,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+          child: child,
+        );
+      },
     );
   }
 

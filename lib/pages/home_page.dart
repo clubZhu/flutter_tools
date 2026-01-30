@@ -94,7 +94,7 @@ class HomePage extends StatelessWidget {
                             icon: Icons.history,
                             title: '拍摄相册',
                             subtitle: '视频录制历史记录',
-                            color: Colors.red,
+                            color: Colors.green,
                           ),
                         ),
                       ),
@@ -115,42 +115,13 @@ class HomePage extends StatelessWidget {
                     crossAxisSpacing: 12,
                     childAspectRatio: 1.2,
                   ),
-                  delegate: SliverChildListDelegate([/*
-                    _buildFeatureCard(
-                      icon: Icons.calculate,
-                      title: '计算器',
-                      color: Colors.blue,
-                      onTap: () => AppNavigation.goToCalculator(),
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.chat_bubble,
-                      title: 'AI聊天',
-                      color: Colors.purple,
-                      onTap: () => AppNavigation.goToChat(),
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.list_alt,
-                      title: '列表管理',
-                      color: Colors.green,
-                      onTap: () => AppNavigation.goToList(),
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.code,
-                      title: 'HTML测试',
-                      color: Colors.orange,
-                      onTap: () => AppNavigation.goToHtmlTest(),
-                    ),*/
+                  delegate: SliverChildListDelegate([
+
                     _buildFeatureCard(
                       icon: Icons.download,
                       title: '视频下载',
                       color: Colors.teal,
                       onTap: () => AppNavigation.goToVideoDownload(),
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.cloud_upload,
-                      title: '文件传输',
-                      color: Colors.indigo,
-                      onTap: () => AppNavigation.goToWebService(),
                     ),
                     _buildFeatureCard(
                       icon: Icons.videocam,
@@ -159,12 +130,13 @@ class HomePage extends StatelessWidget {
                       isHighlight: true,
                       onTap: () => AppNavigation.goToVideoRecording(),
                     ),
-                    /*_buildFeatureCard(
-                      icon: Icons.history,
-                      title: '录制历史',
-                      color: Colors.pink,
-                      onTap: () => AppNavigation.goToVideoHistory(),
-                    ),*/
+                    _buildFeatureCard(
+                      icon: Icons.cloud_upload,
+                      title: '文件传输',
+                      color: Colors.indigo,
+                      onTap: () => AppNavigation.goToWebService(),
+                    ),
+
                   ]),
                 ),
               ),
