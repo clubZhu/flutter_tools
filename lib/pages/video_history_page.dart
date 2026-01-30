@@ -30,7 +30,7 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
                   return Column(
                     children: [
                       // 统计栏
-                      // _buildStatisticsBar(),
+                      _buildStatisticsBar(),
                       // 视频列表
                       Expanded(
                         child: _buildVideoList(),
@@ -257,10 +257,30 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
                       AspectRatio(
                         aspectRatio: 16 / 9,
                         child: video.thumbnailPath.isNotEmpty
-                            ? Image.file(
-                                File(video.thumbnailPath),
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
+                            ? FutureBuilder<bool>(
+                                future: File(video.thumbnailPath).exists(),
+                                builder: (context, snapshot) {
+                                  if (snapshot.connectionState == ConnectionState.waiting) {
+                                    return Container(
+                                      color: Colors.black.withOpacity(0.3),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  if (snapshot.hasData && snapshot.data == true) {
+                                    return Image.file(
+                                      File(video.thumbnailPath),
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error, stackTrace) {
+                                        return _buildDefaultCover();
+                                      },
+                                    );
+                                  }
+
                                   return _buildDefaultCover();
                                 },
                               )

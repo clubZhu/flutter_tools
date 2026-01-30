@@ -40,7 +40,6 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
                       }
                       return Column(
                         children: [
-                          // 统计栏
                           // 视频列表
                           Expanded(
                             child: _buildVideoList(),
@@ -237,6 +236,7 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
                                 video.coverUrl,
                                 fit: BoxFit.cover,
                                 errorBuilder: (context, error, stackTrace) {
+                                  // 网络图片加载失败时显示默认封面
                                   return _buildDefaultCover();
                                 },
                                 loadingBuilder: (context, child, loadingProgress) {
@@ -249,11 +249,21 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
                                             ? loadingProgress.cumulativeBytesLoaded /
                                                 loadingProgress.expectedTotalBytes!
                                             : null,
-                                        valueColor: AlwaysStoppedAnimation<Color>(
-                                          Colors.white.withOpacity(0.7),
+                                        valueColor: const AlwaysStoppedAnimation<Color>(
+                                          Colors.white70,
                                         ),
                                       ),
                                     ),
+                                  );
+                                },
+                                // 增加超时时间
+                                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+                                  if (wasSynchronouslyLoaded) return child;
+                                  return AnimatedOpacity(
+                                    opacity: frame == null ? 0 : 1,
+                                    duration: const Duration(milliseconds: 500),
+                                    curve: Curves.easeOut,
+                                    child: child,
                                   );
                                 },
                               )
