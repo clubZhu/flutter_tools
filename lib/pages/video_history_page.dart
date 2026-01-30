@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/video_recording_controller.dart';
 import '../models/video_recording_model.dart';
-import 'video_recording_page.dart';
+import 'package:calculator_app/widgets/app_background.dart';
 
 /// 视频历史列表页面
 class VideoHistoryPage extends GetView<VideoRecordingController> {
@@ -11,29 +11,71 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('录制历史'),
-        centerTitle: true,
-        actions: [
-          // 刷新按钮
-          IconButton(
-            onPressed: controller.refreshVideoList,
-            icon: const Icon(Icons.refresh),
-            tooltip: '刷新',
-          ),
-        ],
+      body: AppBackground(
+        child: Column(
+          children: [
+            const SizedBox(height: 20,),
+            // 自定义 AppBar
+            _buildAppBar(),
+
+            // 内容区域
+            Expanded(
+              child: SafeArea(
+                bottom: false,
+                child: Obx(() {
+                  if (controller.videoList.isEmpty) {
+                    return _buildEmptyView();
+                  }
+                  return _buildVideoList();
+                }),
+              ),
+            ),
+          ],
+        ),
       ),
-      body: Obx(() {
-        if (controller.videoList.isEmpty) {
-          return _buildEmptyView();
-        }
-        return _buildVideoList();
-      }),
       floatingActionButton: FloatingActionButton(
         onPressed: () => Get.toNamed('/video-recording'),
         backgroundColor: Colors.red,
         child: const Icon(Icons.videocam, color: Colors.white),
       ),
+    );
+  }
+
+  /// 构建自定义AppBar
+  Widget _buildAppBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.arrow_back, color: Colors.white),
+              onPressed: () => Get.back(),
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.2),
+              ),
+            ),
+            const SizedBox(width: 16),
+            const Text(
+              '录制历史',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const Spacer(),
+            // 刷新按钮
+            IconButton(
+              onPressed: controller.refreshVideoList,
+              icon: const Icon(Icons.refresh, color: Colors.white),
+              tooltip: '刷新',
+              style: IconButton.styleFrom(
+                backgroundColor: Colors.white.withOpacity(0.2),
+              ),
+            ),
+          ],
+        ),
+
     );
   }
 
@@ -46,14 +88,14 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
           Icon(
             Icons.videocam_off,
             size: 100,
-            color: Colors.grey[400],
+            color: Colors.white.withOpacity(0.5),
           ),
           const SizedBox(height: 16),
           Text(
             '还没有录制的视频',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey[600],
+              color: Colors.white.withOpacity(0.8),
             ),
           ),
           const SizedBox(height: 8),
@@ -61,7 +103,7 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
             '点击右下角按钮开始录制',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey[500],
+              color: Colors.white.withOpacity(0.6),
             ),
           ),
         ],
@@ -86,132 +128,144 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
 
   /// 构建视频卡片
   Widget _buildVideoCard(VideoRecordingModel video) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      elevation: 2,
+    return AppGlassCard(
+      padding: const EdgeInsets.all(16),
       child: InkWell(
         onTap: () => Get.toNamed('/video-preview', arguments: video),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 视频名称
-              Row(
-                children: [
-                  const Icon(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 视频名称
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
                     Icons.play_circle_outline,
-                    color: Colors.red,
-                    size: 32,
+                    color: Colors.white,
+                    size: 24,
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          video.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        video.name,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          video.createdAtFormatted,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // 更多操作按钮
-                  PopupMenuButton<String>(
-                    onSelected: (value) => _handleMenuAction(value, video),
-                    itemBuilder: (context) => [
-                      const PopupMenuItem(
-                        value: 'rename',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit, size: 20),
-                            SizedBox(width: 8),
-                            Text('重命名'),
-                          ],
-                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete, size: 20, color: Colors.red),
-                            SizedBox(width: 8),
-                            Text('删除', style: TextStyle(color: Colors.red)),
-                          ],
+                      const SizedBox(height: 4),
+                      Text(
+                        video.createdAtFormatted,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.white.withOpacity(0.7),
                         ),
                       ),
                     ],
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-
-              // 视频信息
-              Row(
-                children: [
-                  _buildInfoItem(
-                    icon: Icons.schedule,
-                    label: '时长',
-                    value: video.durationFormatted,
-                  ),
-                  const SizedBox(width: 16),
-                  _buildInfoItem(
-                    icon: Icons.storage,
-                    label: '大小',
-                    value: video.fileSizeFormatted,
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              // 操作按钮
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () =>
-                          Get.toNamed('/video-preview', arguments: video),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
+                ),
+                // 更多操作按钮
+                PopupMenuButton<String>(
+                  onSelected: (value) => _handleMenuAction(value, video),
+                  icon: Icon(Icons.more_vert, color: Colors.white.withOpacity(0.9)),
+                  color: Colors.white.withOpacity(0.95),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'rename',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit, size: 20),
+                          SizedBox(width: 8),
+                          Text('重命名'),
+                        ],
                       ),
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('播放'),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () => _showRenameDialog(video),
-                      icon: const Icon(Icons.edit),
-                      label: const Text('重命名'),
+                    const PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete, size: 20, color: Colors.red),
+                          SizedBox(width: 8),
+                          Text('删除', style: TextStyle(color: Colors.red)),
+                        ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  OutlinedButton(
-                    onPressed: () => _showDeleteDialog(video),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // 视频信息
+            Row(
+              children: [
+                _buildInfoItem(
+                  icon: Icons.schedule,
+                  label: '时长',
+                  value: video.durationFormatted,
+                ),
+                const SizedBox(width: 16),
+                _buildInfoItem(
+                  icon: Icons.storage,
+                  label: '大小',
+                  value: video.fileSizeFormatted,
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 12),
+
+            // 操作按钮
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () =>
+                        Get.toNamed('/video-preview', arguments: video),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
+                      side: BorderSide(color: Colors.red.withOpacity(0.5)),
                     ),
-                    child: const Icon(Icons.delete),
+                    icon: const Icon(Icons.play_arrow),
+                    label: const Text('播放'),
                   ),
-                ],
-              ),
-            ],
-          ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showRenameDialog(video),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.white,
+                      side: BorderSide(color: Colors.white.withOpacity(0.5)),
+                    ),
+                    icon: const Icon(Icons.edit),
+                    label: const Text('重命名'),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  onPressed: () => _showDeleteDialog(video),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: BorderSide(color: Colors.red.withOpacity(0.5)),
+                  ),
+                  child: const Icon(Icons.delete),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
@@ -226,13 +280,13 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 16, color: Colors.grey[600]),
+        Icon(icon, size: 16, color: Colors.white.withOpacity(0.7)),
         const SizedBox(width: 4),
         Text(
           '$label: $value',
           style: TextStyle(
             fontSize: 12,
-            color: Colors.grey[600],
+            color: Colors.white.withOpacity(0.7),
           ),
         ),
       ],

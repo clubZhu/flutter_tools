@@ -85,7 +85,7 @@ class VideoRecordingController extends GetxController {
           _recordingService.updateRecordingDuration();
         });
 
-        Get.snackbar('开始录制', '视频录制已开始');
+        // Get.snackbar('开始录制', '视频录制已开始');
         return true;
       } else {
         Get.snackbar('错误', '开始录制失败');
@@ -112,11 +112,11 @@ class VideoRecordingController extends GetxController {
       if (videoRecording != null) {
         // 刷新视频列表
         await _loadVideoList();
-        Get.snackbar(
+        /*Get.snackbar(
           '录制完成',
           '视频已保存，时长: ${videoRecording.durationFormatted}',
           duration: const Duration(seconds: 2),
-        );
+        );*/
 
         // 跳转到预览页面
         Get.toNamed('/video-preview', arguments: videoRecording);
@@ -152,7 +152,7 @@ class VideoRecordingController extends GetxController {
       final success = await _recordingService.deleteVideo(videoId);
       if (success) {
         await _loadVideoList();
-        Get.snackbar('成功', '视频已删除');
+        // Get.snackbar('成功', '视频已删除');
       } else {
         Get.snackbar('错误', '删除视频失败');
       }

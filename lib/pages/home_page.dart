@@ -70,11 +70,17 @@ class HomePage extends StatelessWidget {
                   child: Row(
                     children: [
                       Expanded(
-                        child: _buildStatCard(
-                          icon: Icons.video_library,
-                          title: '视频',
-                          subtitle: '多媒体工具',
-                          color: Colors.red,
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap:(){
+                            AppNavigation.goToVideoDownloaded();
+                          },
+                          child: _buildStatCard(
+                            icon: Icons.video_library,
+                            title: '视频',
+                            subtitle: '下载历史',
+                            color: Colors.red,
+                          ),
                         ),
                       ),
                     ],
@@ -151,63 +157,63 @@ class HomePage extends StatelessWidget {
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
               // 语言切换
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.3),
-                        width: 1,
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.language,
-                              color: Colors.white.withOpacity(0.9),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              '语言 / Language',
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.9),
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildLanguageButton(
-                                label: 'English',
-                                locale: const Locale('en', 'US'),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _buildLanguageButton(
-                                label: '中文',
-                                locale: const Locale('zh', 'CN'),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
+              // SliverToBoxAdapter(
+              //   child: Padding(
+              //     padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              //     child: Container(
+              //       padding: const EdgeInsets.all(16),
+              //       decoration: BoxDecoration(
+              //         color: Colors.white.withOpacity(0.2),
+              //         borderRadius: BorderRadius.circular(16),
+              //         border: Border.all(
+              //           color: Colors.white.withOpacity(0.3),
+              //           width: 1,
+              //         ),
+              //       ),
+              //       child: Column(
+              //         crossAxisAlignment: CrossAxisAlignment.start,
+              //         children: [
+              //           Row(
+              //             children: [
+              //               Icon(
+              //                 Icons.language,
+              //                 color: Colors.white.withOpacity(0.9),
+              //                 size: 20,
+              //               ),
+              //               const SizedBox(width: 8),
+              //               Text(
+              //                 '语言 / Language',
+              //                 style: TextStyle(
+              //                   color: Colors.white.withOpacity(0.9),
+              //                   fontSize: 16,
+              //                   fontWeight: FontWeight.w600,
+              //                 ),
+              //               ),
+              //             ],
+              //           ),
+              //           const SizedBox(height: 12),
+              //           Row(
+              //             children: [
+              //               Expanded(
+              //                 child: _buildLanguageButton(
+              //                   label: 'English',
+              //                   locale: const Locale('en', 'US'),
+              //                 ),
+              //               ),
+              //               const SizedBox(width: 12),
+              //               Expanded(
+              //                 child: _buildLanguageButton(
+              //                   label: '中文',
+              //                   locale: const Locale('zh', 'CN'),
+              //                 ),
+              //               ),
+              //             ],
+              //           ),
+              //         ],
+              //       ),
+              //     ),
+              //   ),
+              // ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
