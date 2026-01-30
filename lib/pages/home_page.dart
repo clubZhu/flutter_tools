@@ -77,8 +77,23 @@ class HomePage extends StatelessWidget {
                           },
                           child: _buildStatCard(
                             icon: Icons.video_library,
-                            title: '视频',
-                            subtitle: '下载历史',
+                            title: '下载历史',
+                            subtitle: '视频下载历史',
+                            color: Colors.red,
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 12,),
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap:(){
+                            AppNavigation.goToVideoHistory();
+                          },
+                          child: _buildStatCard(
+                            icon: Icons.history,
+                            title: '拍摄相册',
+                            subtitle: '视频录制历史记录',
                             color: Colors.red,
                           ),
                         ),
@@ -144,12 +159,12 @@ class HomePage extends StatelessWidget {
                       isHighlight: true,
                       onTap: () => AppNavigation.goToVideoRecording(),
                     ),
-                    _buildFeatureCard(
+                    /*_buildFeatureCard(
                       icon: Icons.history,
                       title: '录制历史',
                       color: Colors.pink,
                       onTap: () => AppNavigation.goToVideoHistory(),
-                    ),
+                    ),*/
                   ]),
                 ),
               ),
@@ -255,25 +270,29 @@ class HomePage extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              Text(
-                subtitle,
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.8),
-                  fontSize: 12,
+                Text(
+                  subtitle,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.8),
+                    fontSize: 12,
+
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

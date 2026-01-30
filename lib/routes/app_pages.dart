@@ -9,6 +9,7 @@ import 'package:calculator_app/pages/html_test_page.dart';
 import 'package:calculator_app/pages/settings_page.dart';
 import 'package:calculator_app/pages/video_download_page.dart';
 import 'package:calculator_app/features/video_download/pages/video_downloaded_page.dart';
+import 'package:calculator_app/features/video_download/controllers/video_downloaded_controller.dart';
 import 'package:calculator_app/pages/web_service_page.dart';
 import 'package:calculator_app/pages/video_recording_page.dart';
 import 'package:calculator_app/pages/common_video_preview_page.dart';
@@ -53,6 +54,9 @@ class AppPages {
     GetPage(
       name: AppRoutes.VIDEO_DOWNLOADED,
       page: () => const VideoDownloadedPage(),
+      binding: BindingsBuilder(() {
+        Get.lazyPut<VideoDownloadedController>(() => VideoDownloadedController());
+      }),
     ),
     GetPage(
       name: AppRoutes.WEB_SERVICE,
