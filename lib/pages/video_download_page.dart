@@ -823,39 +823,42 @@ class _VideoDownloadPageState extends State<VideoDownloadPage>
       );
     }
 
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: _videoController!.value.size.width,
-            height: _videoController!.value.size.height,
-            child: VideoPlayer(_videoController!),
-          ),
-        ),
-        // 播放按钮
-        Positioned(
-          child: IconButton(
-            iconSize: 64,
-            icon: Icon(
-              _videoController!.value.isPlaying
-                  ? Icons.pause_circle_filled
-                  : Icons.play_circle_filled,
-              color: Colors.white70,
+    return GestureDetector(
+      onTap: () {
+        // 点击视频区域直接切换播放/暂停
+        setState(() {
+          if (_videoController!.value.isPlaying) {
+            _videoController!.pause();
+          } else {
+            _videoController!.play();
+          }
+        });
+      },
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: _videoController!.value.size.width,
+              height: _videoController!.value.size.height,
+              child: VideoPlayer(_videoController!),
             ),
-            onPressed: () {
-              setState(() {
-                if (_videoController!.value.isPlaying) {
-                  _videoController!.pause();
-                } else {
-                  _videoController!.play();
-                }
-              });
-            },
           ),
-        ),
-      ],
+          // 暂停时显示播放图标
+          if (!_videoController!.value.isPlaying)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(
+                child: Icon(
+                  Icons.play_arrow,
+                  color: Colors.white,
+                  size: 64,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import 'package:get/get.dart';
 import '../features/video_download/models/downloaded_video_model.dart';
@@ -172,24 +173,14 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
             ),
           ),
           // 分享按钮
-          if (_isRecordingVideo)
-            IconButton(
-              icon: const Icon(Icons.share, color: Colors.white),
-              onPressed: _shareRecordingVideo,
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.2),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.link, color: Colors.white),
-              onPressed: _copyVideoLink,
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.2),
-              ),
+          IconButton(
+            icon: const Icon(Icons.share, color: Colors.white),
+            onPressed: _shareVideo,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.2),
             ),
-          // 删除按钮（仅录制视频）
-          if (_isRecordingVideo)
+          ),
+          // 删除按钮
             IconButton(
               icon: const Icon(Icons.delete, color: Colors.white),
               onPressed: _showDeleteDialog,
@@ -244,8 +235,15 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
   Widget _buildVideoPlayer() {
     return GestureDetector(
       onTap: () {
+        // 点击视频区域直接切换播放/暂停
         setState(() {
-          _showControls = !_showControls;
+          if (_controller!.value.isPlaying) {
+            _controller!.pause();
+            _showControls = true; // 暂停时显示控制栏
+          } else {
+            _controller!.play();
+            _showControls = false; // 播放时隐藏控制栏
+          }
         });
       },
       child: Stack(
@@ -260,7 +258,7 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
           ),
 
           // 暂停时显示播放图标
-          if (!_controller!.value.isPlaying && !_showControls)
+          if (!_controller!.value.isPlaying)
             Container(
               color: Colors.black.withOpacity(0.3),
               child: const Center(
@@ -272,13 +270,13 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
               ),
             ),
 
-          // 底部控制栏和进度条
+          // 底部控制栏和进度条（暂停时显示，播放时隐藏）
           Positioned(
             left: 0,
             right: 0,
             bottom: 0,
             child: AnimatedOpacity(
-              opacity: _showControls ? 1.0 : 0.0,
+              opacity: (!_controller!.value.isPlaying || _showControls) ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 300),
               child: Container(
                 decoration: BoxDecoration(
@@ -316,8 +314,10 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
                             setState(() {
                               if (_controller!.value.isPlaying) {
                                 _controller!.pause();
+                                _showControls = true;
                               } else {
                                 _controller!.play();
+                                _showControls = false;
                               }
                             });
                           },
@@ -364,50 +364,22 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
     );
   }
 
-  /// 分享录制视频
-  void _shareRecordingVideo() {
-    Get.dialog(
-      AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
-        title: const Text('分享视频'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.link, color: Colors.blue),
-              title: const Text('复制文件路径'),
-              subtitle: Text(
-                _videoPath,
-                style: const TextStyle(fontSize: 12),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: _videoPath));
-                Get.back();
-                Get.snackbar(
-                  '已复制',
-                  '文件路径已复制到剪贴板',
-                  backgroundColor: Colors.green.withOpacity(0.9),
-                  colorText: Colors.white,
-                );
-              },
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('关闭'),
-          ),
-        ],
-      ),
-    );
+  /// 分享视频
+  Future<void> _shareVideo() async {
+    try {
+      await Share.shareXFiles(
+        [XFile(_videoPath)],
+        text: '分享视频',
+      );
+    } catch (e) {
+      Get.snackbar(
+        '错误',
+        '分享失败: $e',
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+    }
   }
-
   /// 显示删除确认对话框（录制视频）
   void _showDeleteDialog() {
     Get.dialog(
