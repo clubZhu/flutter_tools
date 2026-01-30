@@ -41,7 +41,6 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
                       return Column(
                         children: [
                           // 统计栏
-                          _buildStatisticsBar(),
                           // 视频列表
                           Expanded(
                             child: _buildVideoList(),
@@ -115,58 +114,7 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
     );
   }
 
-  /// 构建统计栏
-  Widget _buildStatisticsBar() {
-    final stats = controller.getStatistics();
 
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildStatisticItem(
-              icon: Icons.video_library,
-              label: '总数量',
-              value: '${stats['count']}',
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.white.withOpacity(0.2),
-          ),
-          Expanded(
-            child: _buildStatisticItem(
-              icon: Icons.storage,
-              label: '总大小',
-              value: controller.formatFileSize(stats['totalSize'] as int),
-            ),
-          ),
-          Container(
-            width: 1,
-            height: 40,
-            color: Colors.white.withOpacity(0.2),
-          ),
-          Expanded(
-            child: _buildStatisticItem(
-              icon: Icons.schedule,
-              label: '总时长',
-              value: controller.formatDuration(stats['totalDuration'] as int),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   /// 构建统计项
   Widget _buildStatisticItem({
@@ -311,28 +259,7 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
                               )
                             : _buildDefaultCover(),
                       ),
-                      // 播放按钮覆盖层
-                      Container(
-                        color: Colors.black.withOpacity(0.2),
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.3),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.5),
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.play_arrow,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                          ),
-                        ),
-                      ),
+
                       // 时长标签
                       if (video.duration != null)
                         Positioned(
