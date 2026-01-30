@@ -445,28 +445,6 @@ class _VideoDownloadedPageState extends State<VideoDownloadedPage>
                               )
                             : _buildDefaultCover(),
                       ),
-                      // 播放按钮覆盖层
-                      Container(
-                        color: Colors.black.withOpacity(0.2),
-                        child: Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.3),
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.5),
-                                width: 2,
-                              ),
-                            ),
-                            child: const Icon(
-                              Icons.play_arrow,
-                              color: Colors.white,
-                              size: 32,
-                            ),
-                          ),
-                        ),
-                      ),
                       // 时长标签
                       if (video.duration != null)
                         Positioned(
