@@ -71,15 +71,6 @@ class HomePage extends StatelessWidget {
                     children: [
                       Expanded(
                         child: _buildStatCard(
-                          icon: Icons.apps,
-                          title: '8',
-                          subtitle: '功能模块',
-                          color: Colors.orange,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
                           icon: Icons.video_library,
                           title: '视频',
                           subtitle: '多媒体工具',
@@ -103,7 +94,7 @@ class HomePage extends StatelessWidget {
                     crossAxisSpacing: 12,
                     childAspectRatio: 1.2,
                   ),
-                  delegate: SliverChildListDelegate([
+                  delegate: SliverChildListDelegate([/*
                     _buildFeatureCard(
                       icon: Icons.calculate,
                       title: '计算器',
@@ -127,7 +118,7 @@ class HomePage extends StatelessWidget {
                       title: 'HTML测试',
                       color: Colors.orange,
                       onTap: () => AppNavigation.goToHtmlTest(),
-                    ),
+                    ),*/
                     _buildFeatureCard(
                       icon: Icons.download,
                       title: '视频下载',

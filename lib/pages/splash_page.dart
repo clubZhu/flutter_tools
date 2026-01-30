@@ -1,10 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:local_auth/local_auth.dart';
-import 'package:calculator_app/services/biometric_service.dart';
 import 'package:calculator_app/routes/app_routes.dart';
 
-/// 启动页 - 生物识别验证
+/// 启动页
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -12,91 +11,99 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> {
-  final BiometricService _biometricService = BiometricService();
+class _SplashPageState extends State<SplashPage>
+    with TickerProviderStateMixin {
+  late AnimationController _logoController;
+  late AnimationController _textController;
+  late AnimationController _pulseController;
 
-  bool _isLoading = true;
-  bool _canCheckBiometrics = false;
-  bool _isBiometricEnabled = false;
-  List<BiometricType> _availableBiometrics = [];
-  String _statusMessage = '初始化中...';
+  late Animation<double> _logoScaleAnimation;
+  late Animation<double> _logoFadeAnimation;
+  late Animation<double> _textFadeAnimation;
+  late Animation<double> _textSlideAnimation;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
+    _initAnimations();
     _initialize();
   }
 
-  Future<void> _initialize() async {
-    // 检查设备是否支持生物识别
-    final isSupported = await _biometricService.isDeviceSupported();
-    if (!isSupported) {
-      setState(() {
-        _isLoading = false;
-        _statusMessage = '设备不支持生物识别';
-      });
-      // 延迟后跳转到主页
-      await Future.delayed(const Duration(seconds: 2));
-      _navigateToHome();
-      return;
-    }
-
-    // 检查是否可以检查生物识别
-    final canCheck = await _biometricService.canCheckBiometrics();
-    if (!canCheck) {
-      setState(() {
-        _isLoading = false;
-        _statusMessage = '未设置生物识别';
-      });
-      await Future.delayed(const Duration(seconds: 2));
-      _navigateToHome();
-      return;
-    }
-
-    // 获取可用的生物识别类型
-    final availableBiometrics = await _biometricService.getAvailableBiometrics();
-
-    // 检查是否启用了生物识别
-    final isEnabled = await _biometricService.isBiometricEnabled();
-
-    setState(() {
-      _isLoading = false;
-      _canCheckBiometrics = true;
-      _availableBiometrics = availableBiometrics;
-      _isBiometricEnabled = isEnabled;
-      _statusMessage = _getBiometricTypeName(availableBiometrics);
-    });
-
-    // 如果启用了生物识别，自动触发认证
-    if (isEnabled && availableBiometrics.isNotEmpty) {
-      await _performBiometricAuth();
-    } else {
-      // 未启用，延迟后跳转到主页
-      await Future.delayed(const Duration(seconds: 1));
-      _navigateToHome();
-    }
-  }
-
-  Future<void> _performBiometricAuth() async {
-    final success = await _biometricService.authenticate(
-      localizedReason: '请使用${_getBiometricTypeName(_availableBiometrics)}解锁应用',
+  void _initAnimations() {
+    // Logo 动画控制器
+    _logoController = AnimationController(
+      duration: const Duration(milliseconds: 800),
+      vsync: this,
     );
 
-    if (success) {
-      _navigateToHome();
-    } else {
-      // 认证失败，显示重试按钮
-      setState(() {
-        _statusMessage = '认证失败';
-      });
-    }
+    // 文字动画控制器
+    _textController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    // 脉冲动画控制器
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat();
+
+    // Logo 缩放动画
+    _logoScaleAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _logoController,
+      curve: Curves.elasticOut,
+    ));
+
+    // Logo 淡入动画
+    _logoFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _logoController,
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    ));
+
+    // 文字淡入动画
+    _textFadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(
+      parent: _textController,
+      curve: Curves.easeOut,
+    ));
+
+    // 文字滑入动画
+    _textSlideAnimation = Tween<double>(
+      begin: 30.0,
+      end: 0.0,
+    ).animate(CurvedAnimation(
+      parent: _textController,
+      curve: Curves.easeOutCubic,
+    ));
+
+    // 脉冲动画
+    _pulseAnimation = Tween<double>(
+      begin: 0.8,
+      end: 1.2,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    // 启动动画序列
+    _logoController.forward().then((_) {
+      _textController.forward();
+    });
   }
 
-  String _getBiometricTypeName(List<BiometricType> types) {
-    if (types.isEmpty) return '生物识别';
-
-    final type = types.first;
-    return _biometricService.getBiometricTypeName(type);
+  Future<void> _initialize() async {
+    // 直接跳过生物识别检查，快速进入应用
+    await Future.delayed(const Duration(milliseconds: 1500));
+    _navigateToHome();
   }
 
   void _navigateToHome() {
@@ -109,111 +116,288 @@ class _SplashPageState extends State<SplashPage> {
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
             colors: [
-              Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              Theme.of(context).colorScheme.primary.withOpacity(0.05),
+              Colors.deepPurple.shade400,
+              Colors.blue.shade400,
+              Colors.cyan.shade300,
             ],
           ),
         ),
-        child: SafeArea(
-          child: Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo 或图标
-                Icon(
-                  _getBiometricIcon(),
-                  size: 100,
-                  color: Theme.of(context).colorScheme.primary,
+        child: Stack(
+          children: [
+            // 装饰性背景元素
+            _buildBackgroundDecorations(),
+            // 主要内容
+            SafeArea(
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Logo 动画
+                    _buildLogoAnimation(),
+                    const SizedBox(height: 48),
+
+                    // 应用名称动画
+                    _buildTitleAnimation(),
+                    const SizedBox(height: 16),
+
+                    // 副标题动画
+                    _buildSubtitleAnimation(),
+                    const SizedBox(height: 64),
+
+                    // 加载指示器
+                    _buildLoadingIndicator(),
+                    const SizedBox(height: 24),
+
+                    // 状态文字
+                    _buildStatusText(),
+                  ],
                 ),
-                const SizedBox(height: 32),
-
-                // 应用名称
-                Text(
-                  'Calculator App',
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                ),
-                const SizedBox(height: 48),
-
-                // 状态消息
-                if (_isLoading)
-                  const Column(
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('正在检查生物识别...'),
-                    ],
-                  )
-                else
-                  Column(
-                    children: [
-                      Text(
-                        _statusMessage,
-                        style: Theme.of(context).textTheme.titleLarge,
-                        textAlign: TextAlign.center,
-                      ),
-                      if (_canCheckBiometrics &&
-                          _availableBiometrics.isNotEmpty) ...[
-                        const SizedBox(height: 8),
-                        Text(
-                          _isBiometricEnabled
-                              ? '已启用生物识别登录'
-                              : '可在设置中启用生物识别',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: Colors.grey[600],
-                              ),
-                        ),
-                      ],
-                      const SizedBox(height: 32),
-
-                      // 认证按钮
-                      if (_canCheckBiometrics &&
-                          _availableBiometrics.isNotEmpty &&
-                          !_isLoading)
-                        ElevatedButton.icon(
-                          onPressed: _performBiometricAuth,
-                          icon: Icon(_getBiometricIconData()),
-                          label: const Text('点击验证身份'),
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 16,
-                            ),
-                          ),
-                        ),
-
-                      // 跳过按钮
-                      const SizedBox(height: 16),
-                      TextButton(
-                        onPressed: _navigateToHome,
-                        child: const Text('跳过'),
-                      ),
-                    ],
-                  ),
-              ],
+              ),
             ),
-          ),
+            // 版本号
+            _buildVersionLabel(),
+          ],
         ),
       ),
     );
   }
 
-  IconData _getBiometricIconData() {
-    if (_availableBiometrics.contains(BiometricType.face)) {
-      return Icons.face;
-    } else if (_availableBiometrics.contains(BiometricType.fingerprint)) {
-      return Icons.fingerprint;
-    } else if (_availableBiometrics.contains(BiometricType.iris)) {
-      return Icons.visibility;
-    }
-    return Icons.lock;
+  /// 背景装饰元素
+  Widget _buildBackgroundDecorations() {
+    return Stack(
+      children: [
+        // 左上角圆形
+        Positioned(
+          top: -50,
+          left: -50,
+          child: AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _pulseAnimation.value,
+                child: Container(
+                  width: 200,
+                  height: 200,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.1),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // 右下角圆形
+        Positioned(
+          bottom: -80,
+          right: -80,
+          child: AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: 1.5 - _pulseAnimation.value,
+                child: Container(
+                  width: 250,
+                  height: 250,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: Colors.white.withOpacity(0.08),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        // 左下角小圆形
+        Positioned(
+          bottom: 100,
+          left: -30,
+          child: Container(
+            width: 100,
+            height: 100,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.06),
+            ),
+          ),
+        ),
+        // 右上角小圆形
+        Positioned(
+          top: 150,
+          right: -20,
+          child: Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.1),
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
-  IconData _getBiometricIcon() {
-    return _getBiometricIconData();
+  /// Logo 动画
+  Widget _buildLogoAnimation() {
+    return AnimatedBuilder(
+      animation: _logoScaleAnimation,
+      builder: (context, child) {
+        return Transform.scale(
+          scale: _logoScaleAnimation.value,
+          child: Opacity(
+            opacity: _logoFadeAnimation.value,
+            child: Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.3),
+                  width: 1,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.1),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.apps_rounded,
+                size: 64,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 标题动画
+  Widget _buildTitleAnimation() {
+    return AnimatedBuilder(
+      animation: _textFadeAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _textFadeAnimation.value,
+          child: Transform.translate(
+            offset: Offset(0, _textSlideAnimation.value),
+            child: const Text(
+              '多功能工具箱',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 副标题动画
+  Widget _buildSubtitleAnimation() {
+    return AnimatedBuilder(
+      animation: _textFadeAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _textFadeAnimation.value * 0.8,
+          child: Transform.translate(
+            offset: Offset(0, _textSlideAnimation.value * 1.2),
+            child: Text(
+              'Multi-Purpose Toolbox',
+              style: TextStyle(
+                fontSize: 14,
+                letterSpacing: 2.0,
+                color: Colors.white.withOpacity(0.8),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 加载指示器
+  Widget _buildLoadingIndicator() {
+    return SizedBox(
+      width: 40,
+      height: 40,
+      child: AnimatedBuilder(
+        animation: _pulseAnimation,
+        builder: (context, child) {
+          return const CircularProgressIndicator(
+            strokeWidth: 3,
+            valueColor: AlwaysStoppedAnimation<Color>(
+              Colors.white,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  /// 状态文字
+  Widget _buildStatusText() {
+    return AnimatedBuilder(
+      animation: _textFadeAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _textFadeAnimation.value,
+          child: Text(
+            '正在启动...',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.9),
+              fontSize: 13,
+              letterSpacing: 1.0,
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 版本号标签
+  Widget _buildVersionLabel() {
+    return Positioned(
+      bottom: 20,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: AnimatedBuilder(
+          animation: _textFadeAnimation,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _textFadeAnimation.value * 0.6,
+              child: Text(
+                'Version 2.1.2',
+                style: TextStyle(
+                  color: Colors.white.withOpacity(0.7),
+                  fontSize: 11,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _logoController.dispose();
+    _textController.dispose();
+    _pulseController.dispose();
+    super.dispose();
   }
 }
