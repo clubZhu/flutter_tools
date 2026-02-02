@@ -97,108 +97,30 @@ class _VideoRecordingPageState extends State<VideoRecordingPage>
     );
   }
 
-  /// 构建加载视图 - 使用优美的相机切换动画
+  /// 构建加载视图 - 三个呼吸圆点动画
   Widget _buildLoadingView() {
     return Center(
       child: TweenAnimationBuilder<double>(
         tween: Tween<double>(begin: 0, end: 1),
         duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
         builder: (context, value, child) {
           return Opacity(
             opacity: value,
             child: Transform.scale(
-              scale: 0.6 + (0.4 * value),
+              scale: 0.8 + (0.2 * value),
               child: SizedBox(
-                width: 120,
-                height: 120,
-                child: Stack(
-                  alignment: Alignment.center,
+                width: 100,
+                height: 40,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    // 外圈旋转动画 - 逆时针
-                    TweenAnimationBuilder<double>(
-                      tween: Tween<double>(begin: 0, end: 1),
-                      duration: const Duration(milliseconds: 800),
-                      builder: (context, rotationValue, child) {
-                        return RotationTransition(
-                          turns: AlwaysStoppedAnimation(rotationValue * 0.5),
-                          child: child,
-                        );
-                      },
-                      child: Container(
-                        width: 120,
-                        height: 120,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.2),
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                    // 中圈旋转动画 - 顺时针
-                    TweenAnimationBuilder<double>(
-                      tween: Tween<double>(begin: 0, end: 1),
-                      duration: const Duration(milliseconds: 600),
-                      builder: (context, rotationValue, child) {
-                        return RotationTransition(
-                          turns: AlwaysStoppedAnimation(-rotationValue * 0.8),
-                          child: child,
-                        );
-                      },
-                      child: Container(
-                        width: 90,
-                        height: 90,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.4),
-                            width: 3,
-                          ),
-                        ),
-                      ),
-                    ),
-                    // 内圈脉冲动画
-                    TweenAnimationBuilder<double>(
-                      tween: Tween<double>(begin: 0, end: 1),
-                      duration: const Duration(milliseconds: 500),
-                      builder: (context, pulseValue, child) {
-                        return Transform.scale(
-                          scale: 0.8 + (0.2 * (1 - (2 * pulseValue - 1).abs())),
-                          child: Container(
-                            width: 60,
-                            height: 60,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              gradient: RadialGradient(
-                                colors: [
-                                  Colors.white.withOpacity(0.6),
-                                  Colors.white.withOpacity(0.2),
-                                ],
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    // 中心相机图标 - 旋转动画
-                    TweenAnimationBuilder<double>(
-                      tween: Tween<double>(begin: 0, end: 1),
-                      duration: const Duration(milliseconds: 1000),
-                      builder: (context, iconRotation, child) {
-                        return RotationTransition(
-                          turns: AlwaysStoppedAnimation(iconRotation * 0.3),
-                          child: FadeTransition(
-                            opacity: AlwaysStoppedAnimation(value),
-                            child: Icon(
-                              Icons.flip_camera_ios,
-                              color: Colors.white,
-                              size: 36,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+                    // 第一个圆点
+                    _buildBreathingDot(0),
+                    // 第二个圆点
+                    _buildBreathingDot(1),
+                    // 第三个圆点
+                    _buildBreathingDot(2),
                   ],
                 ),
               ),
@@ -206,6 +128,32 @@ class _VideoRecordingPageState extends State<VideoRecordingPage>
           );
         },
       ),
+    );
+  }
+
+  /// 构建呼吸圆点
+  Widget _buildBreathingDot(int index) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0, end: 1),
+      duration: const Duration(milliseconds: 1500),
+      curve: Curves.easeInOut,
+      builder: (context, value, child) {
+        // 为每个圆点添加延迟，产生波浪效果
+        final delayedValue = ((value * 3) - index).clamp(0.0, 1.0);
+        final scale = 0.6 + 0.4 * (1 - (2 * delayedValue - 1).abs());
+
+        return Transform.scale(
+          scale: scale,
+          child: Container(
+            width: 12,
+            height: 12,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white.withOpacity(0.6 + 0.4 * delayedValue),
+            ),
+          ),
+        );
+      },
     );
   }
 
