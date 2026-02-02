@@ -11,10 +11,11 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
   // 布局模式：true 为网格，false 为饼状
-  bool _isGridMode = true;
+  bool _isGridMode = false; // 默认显示饼状图
   late AnimationController _switchController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  late AnimationController _pulseController; // 脉冲动画控制器
   final GlobalKey _pieChartKey = GlobalKey();
 
   // 功能列表数据
@@ -66,12 +67,19 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       ),
     );
 
+    // 脉冲动画控制器 - 用于饼状图边缘动画
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 1500),
+      vsync: this,
+    )..repeat(); // 循环播放
+
     _switchController.forward();
   }
 
   @override
   void dispose() {
     _switchController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
@@ -296,54 +304,62 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 
   /// 构建饼状布局（可点击）
   Widget _buildPieLayout() {
-    return Container(
-      key: const ValueKey('pie_layout'),
-      height: 400,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          return Stack(
-            children: [
-              // 可点击的饼图
-              GestureDetector(
-                key: _pieChartKey,
-                onTapDown: (details) {
-                  final RenderBox? box = _pieChartKey.currentContext?.findRenderObject() as RenderBox?;
-                  if (box == null) return;
+    return AnimatedBuilder(
+      animation: _pulseController,
+      builder: (context, child) {
+        return Container(
+          key: const ValueKey('pie_layout'),
+          height: 400,
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.2),
+              width: 1,
+            ),
+          ),
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return Stack(
+                children: [
+                  // 可点击的饼图
+                  GestureDetector(
+                    key: _pieChartKey,
+                    onTapDown: (details) {
+                      final RenderBox? box = _pieChartKey.currentContext?.findRenderObject() as RenderBox?;
+                      if (box == null) return;
 
-                  final localPosition = box.globalToLocal(details.globalPosition);
-                  final size = box.size;
-                  final center = Offset(size.width / 2, size.height / 2);
-                  final dx = localPosition.dx - center.dx;
-                  final dy = localPosition.dy - center.dy;
-                  final angle = math.atan2(dy, dx);
+                      final localPosition = box.globalToLocal(details.globalPosition);
+                      final size = box.size;
+                      final center = Offset(size.width / 2, size.height / 2);
+                      final dx = localPosition.dx - center.dx;
+                      final dy = localPosition.dy - center.dy;
+                      final angle = math.atan2(dy, dx);
 
-                  // 找到点击的扇形
-                  final clickedIndex = _getTappedSliceIndex(angle);
-                  if (clickedIndex >= 0 && clickedIndex < _features.length) {
-                    _features[clickedIndex].onTap();
-                  }
-                },
-                child: SizedBox(
-                  height: 300,
-                  child: CustomPaint(
-                    painter: PieChartPainter(_features),
-                    size: const Size.square(300),
+                      // 找到点击的扇形
+                      final clickedIndex = _getTappedSliceIndex(angle);
+                      if (clickedIndex >= 0 && clickedIndex < _features.length) {
+                        _features[clickedIndex].onTap();
+                      }
+                    },
+                    child: SizedBox(
+                      height: 300,
+                      child: CustomPaint(
+                        painter: PieChartPainter(
+                          _features,
+                          animationValue: _pulseController.value,
+                        ),
+                        size: const Size.square(300),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
+                ],
+              );
+            },
+          ),
+        );
+      },
     );
   }
 
@@ -429,17 +445,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
         borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.95),
+            // 半透明玻璃效果
+            color: Colors.white.withOpacity(0.15),
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.25),
+              width: 1.5,
+            ),
             boxShadow: feature.isHighlight
                 ? [
+                    // 高亮项的发光效果
                     BoxShadow(
-                      color: feature.color.withOpacity(0.4),
+                      color: feature.color.withOpacity(0.3),
                       blurRadius: 20,
-                      spreadRadius: 2,
+                      spreadRadius: 1,
                     ),
                   ]
                 : [
+                    // 普通项的阴影
                     BoxShadow(
                       color: Colors.black.withOpacity(0.1),
                       blurRadius: 10,
@@ -455,20 +478,24 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: feature.color.withOpacity(0.15),
+                    color: feature.color.withOpacity(0.25),
                     shape: BoxShape.circle,
+                    border: Border.all(
+                      color: Colors.white.withOpacity(0.3),
+                      width: 1,
+                    ),
                   ),
                   child: Icon(
                     feature.icon,
-                    color: feature.color,
+                    color: Colors.white,
                     size: 32,
                   ),
                 ),
                 const SizedBox(height: 12),
                 Text(
                   feature.title,
-                  style: TextStyle(
-                    color: Colors.grey[800],
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
                   ),
@@ -486,8 +513,12 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
 /// 饼图绘制器
 class PieChartPainter extends CustomPainter {
   final List<FeatureItem> features;
+  final double animationValue;
 
-  PieChartPainter(this.features);
+  PieChartPainter(
+    this.features, {
+    this.animationValue = 0.0,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -497,6 +528,11 @@ class PieChartPainter extends CustomPainter {
     double startAngle = -math.pi / 2;
     const totalAngle = 2 * math.pi;
     final sliceAngle = totalAngle / features.length;
+
+    // 计算脉冲动画的缩放因子 (0.0 ~ 1.0)
+    final pulseValue = (math.sin(animationValue * 2 * math.pi) + 1) / 2;
+    final glowRadius = 3.0 + pulseValue * 5.0; // 光晕半径从3到8变化
+    final glowOpacity = 0.3 + pulseValue * 0.4; // 透明度从0.3到0.7变化
 
     for (int i = 0; i < features.length; i++) {
       final sweepAngle = sliceAngle;
@@ -529,12 +565,20 @@ class PieChartPainter extends CustomPainter {
 
       canvas.drawPath(path, paint);
 
-      // 绘制边框
+      // 绘制边框（带动画效果）
       final borderPaint = Paint()
         ..color = Colors.white.withOpacity(0.3)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2;
       canvas.drawPath(path, borderPaint);
+
+      // 绘制边缘发光效果（脉冲动画）
+      final glowPaint = Paint()
+        ..color = features[i].color.withOpacity(glowOpacity)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = glowRadius
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+      canvas.drawPath(path, glowPaint);
 
       // 绘制图标（在扇形中心位置）
       _drawIconOnSlice(canvas, center, radius, startAngle, sweepAngle, features[i]);
@@ -585,7 +629,8 @@ class PieChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     if (oldDelegate is! PieChartPainter) return true;
-    return oldDelegate.features != features;
+    return oldDelegate.features != features ||
+        oldDelegate.animationValue != animationValue;
   }
 }
 
