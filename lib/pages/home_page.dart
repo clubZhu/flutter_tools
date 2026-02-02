@@ -406,6 +406,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 ),
                 Text(
                   subtitle,
+                  maxLines: 1,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 12,

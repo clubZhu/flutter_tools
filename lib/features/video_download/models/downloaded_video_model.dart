@@ -11,6 +11,7 @@ class DownloadedVideoModel {
   final int fileSize;
   final DateTime downloadedAt;
   final int? duration;
+  final String localThumbnailPath; // 本地缩略图路径
 
   DownloadedVideoModel({
     required this.id,
@@ -24,6 +25,7 @@ class DownloadedVideoModel {
     required this.fileSize,
     required this.downloadedAt,
     this.duration,
+    this.localThumbnailPath = '', // 默认为空字符串
   });
 
   /// 从JSON创建
@@ -40,6 +42,7 @@ class DownloadedVideoModel {
       fileSize: json['fileSize'] as int,
       downloadedAt: DateTime.parse(json['downloadedAt'] as String),
       duration: json['duration'] as int?,
+      localThumbnailPath: json['localThumbnailPath'] as String? ?? '',
     );
   }
 
@@ -57,6 +60,7 @@ class DownloadedVideoModel {
       'fileSize': fileSize,
       'downloadedAt': downloadedAt.toIso8601String(),
       'duration': duration,
+      'localThumbnailPath': localThumbnailPath,
     };
   }
 
@@ -129,6 +133,7 @@ class DownloadedVideoModel {
     int? fileSize,
     DateTime? downloadedAt,
     int? duration,
+    String? localThumbnailPath,
   }) {
     return DownloadedVideoModel(
       id: id ?? this.id,
@@ -142,6 +147,7 @@ class DownloadedVideoModel {
       fileSize: fileSize ?? this.fileSize,
       downloadedAt: downloadedAt ?? this.downloadedAt,
       duration: duration ?? this.duration,
+      localThumbnailPath: localThumbnailPath ?? this.localThumbnailPath,
     );
   }
 }

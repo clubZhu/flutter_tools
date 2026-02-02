@@ -102,13 +102,25 @@ class _VideoDownloadPageState extends State<VideoDownloadPage>
       return;
     }
 
+    // 如果正在下载，先取消下载
+    if (_isDownloading && _cancelToken != null) {
+      _cancelToken!.cancel();
+      _cancelToken = null;
+    }
+
     setState(() {
       _isParsing = true;
       _errorMessage = null;
       _videoInfo = null;
       _videoController?.dispose();
       _videoController = null;
+      _downloadProgress = 0.0;
+      _downloadedFile = null;
+      _isDownloading = false;
     });
+
+    // 重置动画控制器，让动画重新播放
+    _scaleController.reset();
 
     try {
       final videoInfo = await _downloadService.parseVideoUrl(url);
@@ -638,27 +650,72 @@ class _VideoDownloadPageState extends State<VideoDownloadPage>
                 width: 1.5,
               ),
             ),
-            child: TextField(
-              controller: _urlController,
-              focusNode: _urlFocusNode,
-              maxLines: 4,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                height: 1.5,
-              ),
-              decoration: InputDecoration(
-                hintText: '请粘贴抖音、TikTok等平台的视频分享链接...\n\n'
-                    '支持平台:\n'
-                    '• 抖音 / TikTok\n'
-                    '• B站 / 微博 / 快手',
-                hintStyle: TextStyle(
-                  color: Colors.white.withOpacity(0.4),
-                  fontSize: 13,
+            child: Stack(
+              children: [
+                TextField(
+                  controller: _urlController,
+                  focusNode: _urlFocusNode,
+                  maxLines: 4,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    height: 1.5,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: '请粘贴抖音、TikTok等平台的视频分享链接...\n\n'
+                        '支持平台:\n'
+                        '• 抖音 / TikTok\n'
+                        '• B站 / 微博 / 快手',
+                    hintStyle: TextStyle(
+                      color: Colors.white.withOpacity(0.4),
+                      fontSize: 13,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.all(16),
+                  ),
+                  onChanged: (value) {
+                    setState(() {}); // 触发重建以显示/隐藏清空按钮
+                  },
                 ),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.all(16),
-              ),
+                // 清空按钮
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: _urlController.text.isNotEmpty ? 1.0 : 0.0,
+                    child: _urlController.text.isNotEmpty
+                        ? Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () {
+                                _urlController.clear();
+                                _urlFocusNode.unfocus();
+                                setState(() {});
+                              },
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.3),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.close_rounded,
+                                  color: Colors.white.withOpacity(0.9),
+                                  size: 18,
+                                ),
+                              ),
+                            ),
+                          )
+                        : const SizedBox.shrink(),
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 12),

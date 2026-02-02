@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:wakelock_plus/wakelock_plus.dart';
 import '../models/video_recording_model.dart';
 import '../services/video_recording_service.dart';
 
@@ -16,6 +18,7 @@ class VideoRecordingController extends GetxController {
   final RxInt recordingDuration = 0.obs;
   final RxList<VideoRecordingModel> videoList = <VideoRecordingModel>[].obs;
   final RxInt cameraChangeCounter = 0.obs; // 用于强制刷新 UI
+  final RxBool isSwitchingCamera = false.obs; // 相机切换状态
 
   // 相机控制器
   CameraController? get cameraController => _recordingService.controller;
@@ -34,6 +37,8 @@ class VideoRecordingController extends GetxController {
   void onClose() {
     _recordingTimer?.cancel();
     _recordingService.dispose();
+    // 确保在控制器关闭时禁用 wakelock
+    WakelockPlus.disable();
     super.onClose();
   }
 
@@ -74,6 +79,9 @@ class VideoRecordingController extends GetxController {
         return false;
       }
 
+      // 启用 Wakelock 以保持屏幕常亮，防止后台限制
+      await WakelockPlus.enable();
+
       final success = await _recordingService.startRecording();
       if (success) {
         isRecording.value = true;
@@ -88,10 +96,14 @@ class VideoRecordingController extends GetxController {
         // Get.snackbar('开始录制', '视频录制已开始');
         return true;
       } else {
+        // 如果录制失败，禁用 wakelock
+        await WakelockPlus.disable();
         Get.snackbar('错误', '开始录制失败');
         return false;
       }
     } catch (e) {
+      // 如果发生异常，禁用 wakelock
+      await WakelockPlus.disable();
       Get.snackbar('错误', '开始录制失败: $e');
       return false;
     }
@@ -109,6 +121,9 @@ class VideoRecordingController extends GetxController {
       final videoRecording = await _recordingService.stopRecording();
       isRecording.value = false;
 
+      // 禁用 Wakelock
+      await WakelockPlus.disable();
+
       if (videoRecording != null) {
         // 刷新视频列表
         await _loadVideoList();
@@ -125,6 +140,8 @@ class VideoRecordingController extends GetxController {
       }
     } catch (e) {
       isRecording.value = false;
+      // 确保在异常情况下也禁用 wakelock
+      await WakelockPlus.disable();
       Get.snackbar('错误', '停止录制失败: $e');
     }
   }
@@ -132,17 +149,29 @@ class VideoRecordingController extends GetxController {
   /// 切换相机
   Future<void> switchCamera() async {
     try {
-      // 标记正在切换
-      isInitialized.value = false;
+      // 如果正在录制，不允许切换相机
+      if (isRecording.value) {
+        Get.snackbar(
+          '提示',
+          '录制时无法切换相机',
+          backgroundColor: Colors.orange.withOpacity(0.9),
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
+        return;
+      }
+
+      // 标记正在切换相机（不隐藏当前预览）
+      isSwitchingCamera.value = true;
 
       await _recordingService.switchCamera();
 
       // 强制刷新 UI
       cameraChangeCounter.value++;
-      isInitialized.value = true;
+      isSwitchingCamera.value = false;
     } catch (e) {
       Get.snackbar('错误', '切换相机失败: $e');
-      isInitialized.value = true;
+      isSwitchingCamera.value = false;
     }
   }
 

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:share_plus/share_plus.dart';
@@ -196,46 +197,10 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
                   ),
                   child: Stack(
                     children: [
-                      // 封面图
+                      // 封面图 - 优先使用本地缩略图
                       AspectRatio(
                         aspectRatio: 16 / 9,
-                        child: video.coverUrl.isNotEmpty
-                            ? Image.network(
-                                video.coverUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  // 网络图片加载失败时显示默认封面
-                                  return _buildDefaultCover();
-                                },
-                                loadingBuilder: (context, child, loadingProgress) {
-                                  if (loadingProgress == null) return child;
-                                  return Container(
-                                    color: Colors.black.withOpacity(0.3),
-                                    child: Center(
-                                      child: CircularProgressIndicator(
-                                        value: loadingProgress.expectedTotalBytes != null
-                                            ? loadingProgress.cumulativeBytesLoaded /
-                                                loadingProgress.expectedTotalBytes!
-                                            : null,
-                                        valueColor: const AlwaysStoppedAnimation<Color>(
-                                          Colors.white70,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                                // 增加超时时间
-                                frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
-                                  if (wasSynchronouslyLoaded) return child;
-                                  return AnimatedOpacity(
-                                    opacity: frame == null ? 0 : 1,
-                                    duration: const Duration(milliseconds: 500),
-                                    curve: Curves.easeOut,
-                                    child: child,
-                                  );
-                                },
-                              )
-                            : _buildDefaultCover(),
+                        child: _buildVideoThumbnail(video),
                       ),
 
                       // 时长标签
@@ -431,6 +396,77 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
         ),
       ),
     );
+  }
+
+  /// 构建视频缩略图 - 优先使用本地缩略图
+  Widget _buildVideoThumbnail(DownloadedVideoModel video) {
+    // 优先使用本地缩略图
+    if (video.localThumbnailPath.isNotEmpty) {
+      final thumbnailFile = File(video.localThumbnailPath);
+      return Image.file(
+        thumbnailFile,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          // 本地缩略图加载失败，尝试网络图片
+          return _buildNetworkThumbnail(video);
+        },
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded) return child;
+          return AnimatedOpacity(
+            opacity: frame == null ? 0 : 1,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+            child: child,
+          );
+        },
+      );
+    }
+
+    // 没有本地缩略图，使用网络图片
+    return _buildNetworkThumbnail(video);
+  }
+
+  /// 构建网络缩略图（作为备用方案）
+  Widget _buildNetworkThumbnail(DownloadedVideoModel video) {
+    if (video.coverUrl.isNotEmpty) {
+      return Image.network(
+        video.coverUrl,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          // 网络图片也加载失败，显示默认封面
+          return _buildDefaultCover();
+        },
+        loadingBuilder: (context, child, loadingProgress) {
+          if (loadingProgress == null) return child;
+          return Container(
+            color: Colors.black.withOpacity(0.3),
+            child: Center(
+              child: CircularProgressIndicator(
+                value: loadingProgress.expectedTotalBytes != null
+                    ? loadingProgress.cumulativeBytesLoaded /
+                        loadingProgress.expectedTotalBytes!
+                    : null,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  Colors.white70,
+                ),
+              ),
+            ),
+          );
+        },
+        frameBuilder: (context, child, frame, wasSynchronouslyLoaded) {
+          if (wasSynchronouslyLoaded) return child;
+          return AnimatedOpacity(
+            opacity: frame == null ? 0 : 1,
+            duration: const Duration(milliseconds: 500),
+            curve: Curves.easeOut,
+            child: child,
+          );
+        },
+      );
+    }
+
+    // 没有任何缩略图，显示默认封面
+    return _buildDefaultCover();
   }
 
   /// 构建平台标签

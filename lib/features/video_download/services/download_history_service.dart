@@ -3,6 +3,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/downloaded_video_model.dart';
+import '../../../services/video_thumbnail_service.dart';
 
 /// 视频下载历史服务
 /// 从实际下载目录读取文件，而不是单独维护记录
@@ -16,6 +17,7 @@ class DownloadHistoryService {
   static const String _metadataKey = 'video_metadata';
   final List<DownloadedVideoModel> _videos = [];
   Directory? _downloadDirectory;
+  final VideoThumbnailService _thumbnailService = VideoThumbnailService();
 
   /// 获取所有已下载视频
   List<DownloadedVideoModel> get videos => List.unmodifiable(_videos);
@@ -73,18 +75,39 @@ class DownloadHistoryService {
 
             // 从元数据中获取额外信息
             final metadata = metadataMap[fileName];
+            final coverUrl = metadata?['coverUrl'] ?? '';
+
+            // 优先尝试下载封面，如果失败则生成缩略图
+            String thumbnailPath = '';
+            if (coverUrl.isNotEmpty) {
+              // 先尝试下载原始封面图（高质量）
+              thumbnailPath = await _thumbnailService.downloadAndCacheCover(
+                coverUrl,
+                fileName,
+              );
+            }
+
+            // 如果下载封面失败或没有封面URL，则生成缩略图
+            if (thumbnailPath.isEmpty) {
+              thumbnailPath = await _thumbnailService.generateThumbnail(
+                file.path,
+                fileName,
+              );
+            }
+
             final video = DownloadedVideoModel(
               id: fileName,
               title: metadata?['title'] ?? _extractTitleFromFileName(fileName),
               author: metadata?['author'] ?? '未知',
               platform: metadata?['platform'] ?? _guessPlatform(fileName),
               description: metadata?['description'] ?? '',
-              coverUrl: metadata?['coverUrl'] ?? '',
+              coverUrl: coverUrl,
               videoUrl: file.path,
               localPath: file.path,
               fileSize: stat.size,
               downloadedAt: stat.modified,
               duration: metadata?['duration'],
+              localThumbnailPath: thumbnailPath,
             );
 
             _videos.add(video);

@@ -11,8 +11,15 @@ class VideoRecordingPage extends StatefulWidget {
   State<VideoRecordingPage> createState() => _VideoRecordingPageState();
 }
 
-class _VideoRecordingPageState extends State<VideoRecordingPage> {
+class _VideoRecordingPageState extends State<VideoRecordingPage>
+    with TickerProviderStateMixin {
   late final VideoRecordingController _controller;
+
+  // 页面初始化动画
+  late AnimationController _fadeController;
+  late AnimationController _slideController;
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _slideAnimation;
 
   @override
   void initState() {
@@ -23,6 +30,50 @@ class _VideoRecordingPageState extends State<VideoRecordingPage> {
     } else {
       _controller = Get.put(VideoRecordingController());
     }
+
+    // 初始化页面动画
+    _initPageAnimations();
+  }
+
+  /// 初始化页面动画
+  void _initPageAnimations() {
+    _fadeController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _slideController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _fadeController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _slideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _slideController,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+
+    // 启动动画
+    _fadeController.forward();
+    _slideController.forward();
+  }
+
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    _slideController.dispose();
+    super.dispose();
   }
 
   @override
@@ -32,7 +83,7 @@ class _VideoRecordingPageState extends State<VideoRecordingPage> {
       body: Obx(() {
         // 监听相机切换计数器以触发 UI 刷新
         _controller.cameraChangeCounter.value;
-        
+
         if (_controller.hasError.value) {
           return _buildErrorView();
         }
@@ -46,21 +97,114 @@ class _VideoRecordingPageState extends State<VideoRecordingPage> {
     );
   }
 
-  /// 构建加载视图
+  /// 构建加载视图 - 使用优美的相机切换动画
   Widget _buildLoadingView() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          CircularProgressIndicator(
-            color: Colors.white,
-          ),
-          SizedBox(height: 16),
-          Text(
-            '正在初始化相机...',
-            style: TextStyle(color: Colors.white, fontSize: 16),
-          ),
-        ],
+    return Center(
+      child: TweenAnimationBuilder<double>(
+        tween: Tween<double>(begin: 0, end: 1),
+        duration: const Duration(milliseconds: 400),
+        builder: (context, value, child) {
+          return Opacity(
+            opacity: value,
+            child: Transform.scale(
+              scale: 0.6 + (0.4 * value),
+              child: SizedBox(
+                width: 120,
+                height: 120,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // 外圈旋转动画 - 逆时针
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 800),
+                      builder: (context, rotationValue, child) {
+                        return RotationTransition(
+                          turns: AlwaysStoppedAnimation(rotationValue * 0.5),
+                          child: child,
+                        );
+                      },
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.2),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // 中圈旋转动画 - 顺时针
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 600),
+                      builder: (context, rotationValue, child) {
+                        return RotationTransition(
+                          turns: AlwaysStoppedAnimation(-rotationValue * 0.8),
+                          child: child,
+                        );
+                      },
+                      child: Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.4),
+                            width: 3,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // 内圈脉冲动画
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 500),
+                      builder: (context, pulseValue, child) {
+                        return Transform.scale(
+                          scale: 0.8 + (0.2 * (1 - (2 * pulseValue - 1).abs())),
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  Colors.white.withOpacity(0.6),
+                                  Colors.white.withOpacity(0.2),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    // 中心相机图标 - 旋转动画
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 1000),
+                      builder: (context, iconRotation, child) {
+                        return RotationTransition(
+                          turns: AlwaysStoppedAnimation(iconRotation * 0.3),
+                          child: FadeTransition(
+                            opacity: AlwaysStoppedAnimation(value),
+                            child: Icon(
+                              Icons.flip_camera_ios,
+                              color: Colors.white,
+                              size: 36,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -104,19 +248,136 @@ class _VideoRecordingPageState extends State<VideoRecordingPage> {
 
   /// 构建相机视图
   Widget _buildCameraView() {
-    return Stack(
-      children: [
-        // 相机预览
-        Center(
-          child: CameraPreview(_controller.cameraController!),
-        ),
+    return AnimatedBuilder(
+      animation: _fadeAnimation,
+      builder: (context, child) {
+        return Opacity(
+          opacity: _fadeAnimation.value,
+          child: SlideTransition(
+            position: _slideAnimation,
+            child: Stack(
+              children: [
+                // 相机预览
+                Center(
+                  child: Obx(() {
+                    // 监听相机切换以刷新预览
+                    _controller.cameraChangeCounter.value;
+                    return CameraPreview(_controller.cameraController!);
+                  }),
+                ),
 
-        // 顶部工具栏
-        _buildTopToolbar(),
+                // 切换相机时的叠加动画
+                Obx(() {
+                  if (!_controller.isSwitchingCamera.value) {
+                    return const SizedBox.shrink();
+                  }
+                  return _buildCameraSwitchingOverlay();
+                }),
 
-        // 底部控制栏
-        _buildBottomControls(),
-      ],
+                // 顶部工具栏
+                _buildTopToolbar(),
+
+                // 底部控制栏
+                _buildBottomControls(),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 构建相机切换叠加动画
+  Widget _buildCameraSwitchingOverlay() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 300),
+      builder: (context, value, child) {
+        return Container(
+          color: Colors.black.withOpacity(0.3 * value),
+          child: Center(
+            child: Transform.scale(
+              scale: 0.6 + (0.4 * value),
+              child: SizedBox(
+                width: 120,
+                height: 120,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // 外圈旋转动画 - 逆时针
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 800),
+                      builder: (context, rotationValue, child) {
+                        return RotationTransition(
+                          turns: AlwaysStoppedAnimation(rotationValue * 0.5),
+                          child: child,
+                        );
+                      },
+                      child: Container(
+                        width: 120,
+                        height: 120,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.3 * value),
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // 中圈旋转动画 - 顺时针
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 600),
+                      builder: (context, rotationValue, child) {
+                        return RotationTransition(
+                          turns: AlwaysStoppedAnimation(-rotationValue * 0.8),
+                          child: child,
+                        );
+                      },
+                      child: Container(
+                        width: 90,
+                        height: 90,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.5 * value),
+                            width: 3,
+                          ),
+                        ),
+                      ),
+                    ),
+                    // 内圈脉冲动画
+                    TweenAnimationBuilder<double>(
+                      tween: Tween<double>(begin: 0, end: 1),
+                      duration: const Duration(milliseconds: 500),
+                      builder: (context, pulseValue, child) {
+                        return Transform.scale(
+                          scale: 0.8 + (0.2 * (1 - (2 * pulseValue - 1).abs())),
+                          child: Container(
+                            width: 60,
+                            height: 60,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              gradient: RadialGradient(
+                                colors: [
+                                  Colors.white.withOpacity(0.7 * value),
+                                  Colors.white.withOpacity(0.3 * value),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -143,68 +404,101 @@ class _VideoRecordingPageState extends State<VideoRecordingPage> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               // 返回按钮
-              IconButton(
+              _buildAnimatedIconButton(
+                icon: Icons.arrow_back,
                 onPressed: () => Get.back(),
-                icon: const Icon(Icons.arrow_back, color: Colors.white, size: 28),
-                constraints: const BoxConstraints(),
-                padding: const EdgeInsets.all(12),
               ),
 
               // 录制时长显示
               Expanded(
                 child: Center(
                   child: Obx(() {
+                    // 监听录制状态和时长，确保时长能实时更新
+                    _controller.recordingDuration.value;
                     if (!_controller.isRecording.value) {
                       return const SizedBox.shrink();
                     }
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.8),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.fiber_manual_record,
-                            color: Colors.white,
-                            size: 12,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _controller.formattedDuration,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
+                    return _buildRecordingIndicator();
                   }),
                 ),
               ),
 
               // 查看历史按钮
-              IconButton(
+              _buildAnimatedIconButton(
+                icon: Icons.photo_library,
                 onPressed: () => Get.toNamed('/video-history'),
-                icon: const Icon(
-                  Icons.photo_library,
-                  color: Colors.white,
-                  size: 28,
-                ),
-                constraints: const BoxConstraints(),
-                padding: const EdgeInsets.all(12),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  /// 构建录制时长指示器
+  Widget _buildRecordingIndicator() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 300),
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: 0.8 + (0.2 * value),
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 8,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.fiber_manual_record,
+                  color: Colors.white,
+                  size: 12,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _controller.formattedDuration,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// 构建带动画的图标按钮
+  Widget _buildAnimatedIconButton({
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 300),
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: 0.8 + (0.2 * value),
+          child: FadeTransition(
+            opacity: AlwaysStoppedAnimation(value),
+            child: IconButton(
+              onPressed: onPressed,
+              icon: Icon(icon, color: Colors.white, size: 28),
+              constraints: const BoxConstraints(),
+              padding: const EdgeInsets.all(12),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -231,16 +525,7 @@ class _VideoRecordingPageState extends State<VideoRecordingPage> {
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               // 切换相机按钮
-              IconButton(
-                onPressed: _controller.switchCamera,
-                icon: const Icon(
-                  Icons.flip_camera_ios,
-                  color: Colors.white,
-                  size: 32,
-                ),
-                constraints: const BoxConstraints(),
-                padding: const EdgeInsets.all(16),
-              ),
+              _buildCameraSwitchButton(),
 
               // 录制按钮
               Expanded(
@@ -264,9 +549,58 @@ class _VideoRecordingPageState extends State<VideoRecordingPage> {
       ),
     );
   }
+
+  /// 构建带旋转动画的相机切换按钮
+  Widget _buildCameraSwitchButton() {
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 400),
+      builder: (context, value, child) {
+        return Transform.scale(
+          scale: 0.8 + (0.2 * value),
+          child: FadeTransition(
+            opacity: AlwaysStoppedAnimation(value),
+            child: Obx(() {
+              final isRecording = _controller.isRecording.value;
+              final isEnabled = !isRecording;
+
+              return GestureDetector(
+                onTap: isEnabled ? _controller.switchCamera : null,
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 200),
+                  opacity: isEnabled ? 1.0 : 0.4,
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(
+                        isEnabled ? 0.15 : 0.05,
+                      ),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: Colors.white.withOpacity(
+                          isEnabled ? 0.3 : 0.1,
+                        ),
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.flip_camera_ios,
+                      color: Colors.white.withOpacity(
+                        isEnabled ? 1.0 : 0.5,
+                      ),
+                      size: 32,
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      },
+    );
+  }
 }
 
-/// 带动画效果的录制按钮
 /// 带动画效果的录制按钮
 class _AnimatedRecordButton extends StatefulWidget {
   final bool isRecording;
@@ -289,7 +623,7 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
   late AnimationController _pulseController;
   late AnimationController _morphController;
   late AnimationController _glowController;
-  
+
   late Animation<double> _tapScaleAnimation;
   late Animation<double> _pulseAnimation;
   late Animation<double> _morphAnimation;
@@ -307,7 +641,7 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
     );
 
     // 创建弹性缩放序列：按下->回弹-> overshoot
-    
+
     _tapScaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween<double>(begin: 1.0, end: 0.85)
@@ -375,7 +709,7 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
   @override
   void didUpdateWidget(_AnimatedRecordButton oldWidget) {
     super.didUpdateWidget(oldWidget);
-    
+
     // 当开始录制时
     if (widget.isRecording && !oldWidget.isRecording) {
       _morphController.forward();
@@ -385,7 +719,7 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
           _pulseController.repeat(reverse: true);
         }
       });
-    } 
+    }
     // 当停止录制时
     else if (!widget.isRecording && oldWidget.isRecording) {
       _morphController.reverse();
@@ -423,14 +757,14 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
       onTap: _handleTap,
       child: AnimatedBuilder(
         animation: Listenable.merge([
-          _tapScaleAnimation, 
-          _pulseAnimation, 
+          _tapScaleAnimation,
+          _pulseAnimation,
           _morphAnimation,
           _glowAnimation,
         ]),
         builder: (context, child) {
           // 计算缩放：点击弹性缩放 + 录制时脉冲
-          final baseScale = widget.isRecording 
+          final baseScale = widget.isRecording
               ? (_tapScaleAnimation.value * _pulseAnimation.value)
               : _tapScaleAnimation.value;
 
@@ -502,7 +836,7 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
                           color: Colors.red.withOpacity(0.1 * _glowAnimation.value),
                         ),
                       ),
-                    
+
                     // 主按钮
                     AnimatedContainer(
                       duration: const Duration(milliseconds: 250),
@@ -521,7 +855,6 @@ class _AnimatedRecordButtonState extends State<_AnimatedRecordButton>
                             ),
                             blurRadius: 8,
                             offset: const Offset(0, 3),
-                            // inset: widget.isRecording,
                           ),
                           // 外阴影效果
                           BoxShadow(
