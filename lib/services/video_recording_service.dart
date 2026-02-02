@@ -74,14 +74,29 @@ class VideoRecordingService {
   Future<void> switchCamera() async {
     if (_cameras == null || _cameras!.length < 2) return;
 
-    final currentCamera = _controller?.description;
-    final currentIndex = _cameras!.indexWhere(
-      (camera) => camera.lensDirection == currentCamera?.lensDirection,
-    );
+    try {
+      final currentCamera = _controller?.description;
+      final currentIndex = _cameras!.indexWhere(
+        (camera) => camera.lensDirection == currentCamera?.lensDirection,
+      );
 
-    final nextIndex = (currentIndex + 1) % _cameras!.length;
-    await _controller?.dispose();
-    await _initCamera(_cameras![nextIndex]);
+      final nextIndex = (currentIndex + 1) % _cameras!.length;
+
+      // 释放旧相机
+      if (_controller != null) {
+        await _controller!.dispose();
+        _controller = null;
+      }
+
+      // 等待确保相机完全释放
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // 初始化新相机
+      await _initCamera(_cameras![nextIndex]);
+    } catch (e) {
+      print('切换相机失败: $e');
+      rethrow;
+    }
   }
 
   /// 开始录制视频

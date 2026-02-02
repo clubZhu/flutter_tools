@@ -510,7 +510,8 @@ class _VideoRecordingPageState extends State<VideoRecordingPage>
             opacity: AlwaysStoppedAnimation(value),
             child: Obx(() {
               final isRecording = _controller.isRecording.value;
-              final isEnabled = !isRecording;
+              final isSwitching = _controller.isSwitchingCamera.value;
+              final isEnabled = !isRecording && !isSwitching;
 
               return GestureDetector(
                 onTap: isEnabled ? _controller.switchCamera : null,
@@ -531,12 +532,39 @@ class _VideoRecordingPageState extends State<VideoRecordingPage>
                         width: 2,
                       ),
                     ),
-                    child: Icon(
-                      Icons.flip_camera_ios,
-                      color: Colors.white.withOpacity(
-                        isEnabled ? 1.0 : 0.5,
-                      ),
-                      size: 32,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        Icon(
+                          Icons.flip_camera_ios,
+                          color: Colors.white.withOpacity(
+                            isEnabled ? 1.0 : 0.5,
+                          ),
+                          size: 32,
+                        ),
+                        // 切换中的加载指示器
+                        if (isSwitching)
+                          Positioned.fill(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.black.withOpacity(0.3),
+                              ),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ),

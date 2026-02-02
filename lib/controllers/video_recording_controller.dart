@@ -26,6 +26,10 @@ class VideoRecordingController extends GetxController {
   // 录制定时器
   Timer? _recordingTimer;
 
+  // 防抖：相机切换冷却时间
+  DateTime _lastSwitchTime = DateTime.now();
+  static const _switchCooldown = Duration(milliseconds: 500);
+
   @override
   void onInit() {
     super.onInit();
@@ -161,8 +165,27 @@ class VideoRecordingController extends GetxController {
         return;
       }
 
-      // 标记正在切换相机（不隐藏当前预览）
+      // 防抖：检查是否在冷却期内
+      final now = DateTime.now();
+      if (now.difference(_lastSwitchTime) < _switchCooldown) {
+        print('相机切换冷却中，忽略此次请求');
+        return;
+      }
+
+      // 防止重复切换
+      if (isSwitchingCamera.value) {
+        print('相机正在切换中，忽略此次请求');
+        return;
+      }
+
+      // 更新最后切换时间
+      _lastSwitchTime = now;
+
+      // 标记正在切换相机
       isSwitchingCamera.value = true;
+
+      // 等待一小段时间确保上一个操作完全完成
+      await Future.delayed(const Duration(milliseconds: 100));
 
       await _recordingService.switchCamera();
 
@@ -170,7 +193,13 @@ class VideoRecordingController extends GetxController {
       cameraChangeCounter.value++;
       isSwitchingCamera.value = false;
     } catch (e) {
-      Get.snackbar('错误', '切换相机失败: $e');
+      print('切换相机异常: $e');
+      Get.snackbar(
+        '错误',
+        '切换相机失败',
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+      );
       isSwitchingCamera.value = false;
     }
   }
