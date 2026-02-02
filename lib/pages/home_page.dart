@@ -1,9 +1,86 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:calculator_app/routes/app_navigation.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
+
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
+  // 布局模式：true 为网格，false 为饼状
+  bool _isGridMode = true;
+  late AnimationController _switchController;
+  late Animation<double> _fadeAnimation;
+  late Animation<double> _scaleAnimation;
+  final GlobalKey _pieChartKey = GlobalKey();
+
+  // 功能列表数据
+  final List<FeatureItem> _features = [
+    FeatureItem(
+      icon: Icons.download,
+      title: '视频下载',
+      color: Colors.teal,
+      onTap: () => AppNavigation.goToVideoDownload(),
+    ),
+    FeatureItem(
+      icon: Icons.videocam,
+      title: '录制视频',
+      color: Colors.red,
+      isHighlight: true,
+      onTap: () => AppNavigation.goToVideoRecording(),
+    ),
+    FeatureItem(
+      icon: Icons.cloud_upload,
+      title: '文件传输',
+      color: Colors.indigo,
+      onTap: () => AppNavigation.goToWebService(),
+    ),
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _initAnimations();
+  }
+
+  void _initAnimations() {
+    _switchController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _switchController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _switchController,
+        curve: Curves.elasticOut,
+      ),
+    );
+
+    _switchController.forward();
+  }
+
+  @override
+  void dispose() {
+    _switchController.dispose();
+    super.dispose();
+  }
+
+  void _switchLayout() {
+    setState(() {
+      _isGridMode = !_isGridMode;
+    });
+    _switchController.forward(from: 0);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -51,12 +128,19 @@ class HomePage extends StatelessWidget {
                           ),
                         ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.settings, color: Colors.white),
-                        onPressed: () => AppNavigation.goToSettings(),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                        ),
+                      Row(
+                        children: [
+                          // 布局切换按钮
+                          _buildLayoutSwitchButton(),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            icon: const Icon(Icons.settings, color: Colors.white),
+                            onPressed: () => AppNavigation.goToSettings(),
+                            style: IconButton.styleFrom(
+                              backgroundColor: Colors.white.withOpacity(0.2),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -83,7 +167,7 @@ class HomePage extends StatelessWidget {
                           ),
                         ),
                       ),
-                      SizedBox(width: 12,),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: GestureDetector(
                           behavior: HitTestBehavior.opaque,
@@ -105,102 +189,13 @@ class HomePage extends StatelessWidget {
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-              // 功能网格
+              // 功能展示区域
               SliverPadding(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    mainAxisSpacing: 12,
-                    crossAxisSpacing: 12,
-                    childAspectRatio: 1.2,
-                  ),
-                  delegate: SliverChildListDelegate([
-
-                    _buildFeatureCard(
-                      icon: Icons.download,
-                      title: '视频下载',
-                      color: Colors.teal,
-                      onTap: () => AppNavigation.goToVideoDownload(),
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.videocam,
-                      title: '录制视频',
-                      color: Colors.red,
-                      isHighlight: true,
-                      onTap: () => AppNavigation.goToVideoRecording(),
-                    ),
-                    _buildFeatureCard(
-                      icon: Icons.cloud_upload,
-                      title: '文件传输',
-                      color: Colors.indigo,
-                      onTap: () => AppNavigation.goToWebService(),
-                    ),
-
-                  ]),
+                sliver: SliverToBoxAdapter(
+                  child: _buildLayoutContent(),
                 ),
               ),
-
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-              // 语言切换
-              // SliverToBoxAdapter(
-              //   child: Padding(
-              //     padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              //     child: Container(
-              //       padding: const EdgeInsets.all(16),
-              //       decoration: BoxDecoration(
-              //         color: Colors.white.withOpacity(0.2),
-              //         borderRadius: BorderRadius.circular(16),
-              //         border: Border.all(
-              //           color: Colors.white.withOpacity(0.3),
-              //           width: 1,
-              //         ),
-              //       ),
-              //       child: Column(
-              //         crossAxisAlignment: CrossAxisAlignment.start,
-              //         children: [
-              //           Row(
-              //             children: [
-              //               Icon(
-              //                 Icons.language,
-              //                 color: Colors.white.withOpacity(0.9),
-              //                 size: 20,
-              //               ),
-              //               const SizedBox(width: 8),
-              //               Text(
-              //                 '语言 / Language',
-              //                 style: TextStyle(
-              //                   color: Colors.white.withOpacity(0.9),
-              //                   fontSize: 16,
-              //                   fontWeight: FontWeight.w600,
-              //                 ),
-              //               ),
-              //             ],
-              //           ),
-              //           const SizedBox(height: 12),
-              //           Row(
-              //             children: [
-              //               Expanded(
-              //                 child: _buildLanguageButton(
-              //                   label: 'English',
-              //                   locale: const Locale('en', 'US'),
-              //                 ),
-              //               ),
-              //               const SizedBox(width: 12),
-              //               Expanded(
-              //                 child: _buildLanguageButton(
-              //                   label: '中文',
-              //                   locale: const Locale('zh', 'CN'),
-              //                 ),
-              //               ),
-              //             ],
-              //           ),
-              //         ],
-              //       ),
-              //     ),
-              //   ),
-              // ),
 
               const SliverToBoxAdapter(child: SizedBox(height: 24)),
             ],
@@ -210,7 +205,162 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // 统计卡片
+  /// 构建布局内容（带动画）
+  Widget _buildLayoutContent() {
+    return AnimatedBuilder(
+      animation: _switchController,
+      builder: (context, child) {
+        final content = _isGridMode ? _buildGridLayout() : _buildPieLayout();
+
+        return FadeTransition(
+          opacity: _fadeAnimation,
+          child: ScaleTransition(
+            scale: _scaleAnimation,
+            child: content,
+          ),
+        );
+      },
+    );
+  }
+
+  /// 构建布局切换按钮
+  Widget _buildLayoutSwitchButton() {
+    return GestureDetector(
+      onTap: _switchLayout,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) {
+                return ScaleTransition(
+                  scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOut,
+                    ),
+                  ),
+                  child: child,
+                );
+              },
+              child: Icon(
+                _isGridMode ? Icons.grid_view : Icons.pie_chart,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              _isGridMode ? '网格' : '饼状',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// 构建网格布局
+  Widget _buildGridLayout() {
+    return GridView.builder(
+      key: const ValueKey('grid_layout'),
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        mainAxisSpacing: 12,
+        crossAxisSpacing: 12,
+        childAspectRatio: 1.2,
+      ),
+      itemCount: _features.length,
+      itemBuilder: (context, index) {
+        return _buildFeatureCard(_features[index]);
+      },
+    );
+  }
+
+  /// 构建饼状布局（可点击）
+  Widget _buildPieLayout() {
+    return Container(
+      key: const ValueKey('pie_layout'),
+      height: 400,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              // 可点击的饼图
+              GestureDetector(
+                key: _pieChartKey,
+                onTapDown: (details) {
+                  final RenderBox? box = _pieChartKey.currentContext?.findRenderObject() as RenderBox?;
+                  if (box == null) return;
+
+                  final localPosition = box.globalToLocal(details.globalPosition);
+                  final size = box.size;
+                  final center = Offset(size.width / 2, size.height / 2);
+                  final dx = localPosition.dx - center.dx;
+                  final dy = localPosition.dy - center.dy;
+                  final angle = math.atan2(dy, dx);
+
+                  // 找到点击的扇形
+                  final clickedIndex = _getTappedSliceIndex(angle);
+                  if (clickedIndex >= 0 && clickedIndex < _features.length) {
+                    _features[clickedIndex].onTap();
+                  }
+                },
+                child: SizedBox(
+                  height: 300,
+                  child: CustomPaint(
+                    painter: PieChartPainter(_features),
+                    size: const Size.square(300),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  /// 根据点击角度获取扇形索引
+  int _getTappedSliceIndex(double angle) {
+    // 将角度标准化到 [0, 2π) 范围
+    var normalizedAngle = angle + math.pi / 2;
+    if (normalizedAngle < 0) {
+      normalizedAngle += 2 * math.pi;
+    }
+
+    final sliceAngle = 2 * math.pi / _features.length;
+    final index = (normalizedAngle / sliceAngle).floor();
+    return index.clamp(0, _features.length - 1);
+  }
+
+  /// 构建统计卡片
   Widget _buildStatCard({
     required IconData icon,
     required String title,
@@ -256,11 +406,9 @@ class HomePage extends StatelessWidget {
                 ),
                 Text(
                   subtitle,
-                  overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.8),
                     fontSize: 12,
-
                   ),
                 ),
               ],
@@ -271,29 +419,21 @@ class HomePage extends StatelessWidget {
     );
   }
 
-  // 功能卡片
-  Widget _buildFeatureCard({
-    required IconData icon,
-    required String title,
-    required Color color,
-    bool isHighlight = false,
-    required VoidCallback onTap,
-  }) {
+  /// 构建功能卡片
+  Widget _buildFeatureCard(FeatureItem feature) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: onTap,
+        onTap: feature.onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
           decoration: BoxDecoration(
-            color: isHighlight 
-                ? Colors.white
-                : Colors.white.withOpacity(0.95),
+            color: Colors.white.withOpacity(0.95),
             borderRadius: BorderRadius.circular(20),
-            boxShadow: isHighlight
+            boxShadow: feature.isHighlight
                 ? [
                     BoxShadow(
-                      color: color.withOpacity(0.4),
+                      color: feature.color.withOpacity(0.4),
                       blurRadius: 20,
                       spreadRadius: 2,
                     ),
@@ -306,93 +446,161 @@ class HomePage extends StatelessWidget {
                     ),
                   ],
           ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isHighlight
-                      ? color.withOpacity(0.2)
-                      : color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Icon(
-                  icon,
-                  color: isHighlight ? color : color.withOpacity(0.8),
-                  size: 32,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  color: isHighlight ? color : Colors.grey.shade800,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (isHighlight)
-                Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: color.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '推荐',
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: feature.color.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    feature.icon,
+                    color: feature.color,
+                    size: 32,
                   ),
                 ),
-            ],
+                const SizedBox(height: 12),
+                Text(
+                  feature.title,
+                  style: TextStyle(
+                    color: Colors.grey[800],
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+/// 饼图绘制器
+class PieChartPainter extends CustomPainter {
+  final List<FeatureItem> features;
+
+  PieChartPainter(this.features);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2 - 20;
+
+    double startAngle = -math.pi / 2;
+    const totalAngle = 2 * math.pi;
+    final sliceAngle = totalAngle / features.length;
+
+    for (int i = 0; i < features.length; i++) {
+      final sweepAngle = sliceAngle;
+      final path = Path()..moveTo(center.dx, center.dy);
+
+      // 绘制扇形
+      path.arcTo(
+        Rect.fromCircle(center: center, radius: radius),
+        startAngle,
+        sweepAngle,
+        false,
+      );
+      path.close();
+
+      // 绘制渐变填充
+      final gradient = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          features[i].color.withOpacity(0.7),
+          features[i].color.withOpacity(0.9),
+        ],
+      );
+
+      final paint = Paint()
+        ..shader = gradient.createShader(
+          Rect.fromCircle(center: center, radius: radius),
+        )
+        ..style = PaintingStyle.fill;
+
+      canvas.drawPath(path, paint);
+
+      // 绘制边框
+      final borderPaint = Paint()
+        ..color = Colors.white.withOpacity(0.3)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2;
+      canvas.drawPath(path, borderPaint);
+
+      // 绘制图标（在扇形中心位置）
+      _drawIconOnSlice(canvas, center, radius, startAngle, sweepAngle, features[i]);
+
+      startAngle += sweepAngle;
+    }
+  }
+
+  void _drawIconOnSlice(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    double startAngle,
+    double sweepAngle,
+    FeatureItem feature,
+  ) {
+    // 计算图标位置（在扇形中间）
+    final midAngle = startAngle + sweepAngle / 2;
+    final iconRadius = radius * 0.65;
+    final iconX = center.dx + iconRadius * math.cos(midAngle);
+    final iconY = center.dy + iconRadius * math.sin(midAngle);
+
+    // 绘制白色圆形背景
+    final iconBackgroundPaint = Paint()
+      ..color = Colors.white.withOpacity(0.2)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(iconX, iconY), 24, iconBackgroundPaint);
+
+    // 使用 TextPainter 绘制图标
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(feature.icon.codePoint),
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 24,
+          fontFamily: 'MaterialIcons',
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    textPainter.layout();
+    textPainter.paint(
+      canvas,
+      Offset(iconX - textPainter.width / 2, iconY - textPainter.height / 2),
     );
   }
 
-  // 语言切换按钮
-  Widget _buildLanguageButton({
-    required String label,
-    required Locale locale,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => Get.updateLocale(locale),
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: Center(
-            child: Text(
-              label,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    if (oldDelegate is! PieChartPainter) return true;
+    return oldDelegate.features != features;
   }
+}
+
+/// 功能项数据类
+class FeatureItem {
+  final IconData icon;
+  final String title;
+  final Color color;
+  final bool isHighlight;
+  final VoidCallback onTap;
+
+  FeatureItem({
+    required this.icon,
+    required this.title,
+    required this.color,
+    this.isHighlight = false,
+    required this.onTap,
+  });
 }
