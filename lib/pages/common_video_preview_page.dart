@@ -11,6 +11,7 @@ import 'package:calculator_app/widgets/app_background.dart';
 
 /// 通用视频预览页面
 /// 支持已下载视频和录制视频的预览
+/// 支持横屏播放和双指缩放
 class CommonVideoPreviewPage extends StatefulWidget {
   const CommonVideoPreviewPage({Key? key}) : super(key: key);
 
@@ -23,6 +24,11 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
   bool _isInitialized = false;
   bool _hasError = false;
   bool _showControls = false;
+  bool _isFullScreen = false; // 是否全屏
+
+  // 缩放控制器
+  final TransformationController _transformationController =
+      TransformationController();
 
   // 视频数据
   dynamic _video;
@@ -88,6 +94,15 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
   @override
   void dispose() {
     _controller?.dispose();
+    _transformationController.dispose();
+    // 退出时恢复竖屏和系统UI
+    if (_isFullScreen) {
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    }
     super.dispose();
   }
 
@@ -103,6 +118,17 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
 
   @override
   Widget build(BuildContext context) {
+    // 全屏模式下的布局
+    if (_isFullScreen) {
+      return Scaffold(
+        backgroundColor: Colors.black,
+        body: _isFullScreen
+            ? _buildFullScreenPlayer()
+            : _buildNormalPlayer(),
+      );
+    }
+
+    // 普通模式
     return Scaffold(
       backgroundColor: Colors.black,
       body: AppBackground(
@@ -130,6 +156,36 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNormalPlayer() {
+    return AppBackground(
+      child: SafeArea(
+        child: Column(
+          children: [
+            // 自定义AppBar
+            _buildAppBar(),
+
+            // 视频播放区域
+              Expanded(
+                child: Hero(
+                  tag: _heroTag,
+                  child: _hasError
+                      ? _buildErrorView()
+                      : !_isInitialized
+                          ? const Center(
+                              child: CircularProgressIndicator(
+                                valueColor:
+                                    AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            )
+                          : _buildVideoPlayer(),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -172,6 +228,18 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
               ],
             ),
           ),
+          // 横屏/全屏切换按钮
+          IconButton(
+            icon: Icon(
+              _isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen,
+              color: Colors.white,
+            ),
+            onPressed: _toggleFullScreen,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.white.withOpacity(0.2),
+            ),
+          ),
+          const SizedBox(width: 8),
           // 分享按钮
           IconButton(
             icon: const Icon(Icons.share, color: Colors.white),
@@ -181,13 +249,13 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
             ),
           ),
           // 删除按钮
-            IconButton(
-              icon: const Icon(Icons.delete, color: Colors.white),
-              onPressed: _showDeleteDialog,
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.red.withOpacity(0.2),
-              ),
+          IconButton(
+            icon: const Icon(Icons.delete, color: Colors.white),
+            onPressed: _showDeleteDialog,
+            style: IconButton.styleFrom(
+              backgroundColor: Colors.red.withOpacity(0.2),
             ),
+          ),
         ],
       ),
     );
@@ -249,11 +317,16 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          // 视频播放器
-          Center(
-            child: AspectRatio(
-              aspectRatio: _controller!.value.aspectRatio,
-              child: VideoPlayer(_controller!),
+          // 视频播放器 - 支持双指缩放
+          InteractiveViewer(
+            transformationController: _transformationController,
+            minScale: 1.0,
+            maxScale: 3.0,
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: _controller!.value.aspectRatio,
+                child: VideoPlayer(_controller!),
+              ),
             ),
           ),
 
@@ -353,17 +426,6 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
     );
   }
 
-  /// 复制视频链接（已下载视频）
-  void _copyVideoLink() {
-    Clipboard.setData(ClipboardData(text: _video.videoUrl));
-    Get.snackbar(
-      '已复制',
-      '视频链接已复制到剪贴板',
-      backgroundColor: Colors.green.withOpacity(0.9),
-      colorText: Colors.white,
-    );
-  }
-
   /// 分享视频
   Future<void> _shareVideo() async {
     try {
@@ -421,6 +483,220 @@ class _CommonVideoPreviewPageState extends State<CommonVideoPreviewPage> {
               foregroundColor: Colors.red,
             ),
             child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// 切换全屏模式
+  void _toggleFullScreen() {
+    setState(() {
+      _isFullScreen = !_isFullScreen;
+      if (_isFullScreen) {
+        // 进入全屏横屏模式
+        SystemChrome.setPreferredOrientations([
+          DeviceOrientation.landscapeLeft,
+          DeviceOrientation.landscapeRight,
+        ]);
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      } else {
+        // 退出全屏，恢复竖屏
+        SystemChrome.setPreferredOrientations([
+          DeviceOrientation.portraitUp,
+          DeviceOrientation.portraitDown,
+        ]);
+        SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+        // 重置缩放
+        _transformationController.value = Matrix4.identity();
+      }
+    });
+  }
+
+  /// 构建全屏播放器
+  Widget _buildFullScreenPlayer() {
+    return GestureDetector(
+      onTap: () {
+        // 点击视频区域切换播放/暂停
+        setState(() {
+          if (_controller!.value.isPlaying) {
+            _controller!.pause();
+            _showControls = true;
+          } else {
+            _controller!.play();
+            _showControls = false;
+          }
+        });
+      },
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // 视频播放器 - 支持双指缩放
+          InteractiveViewer(
+            transformationController: _transformationController,
+            minScale: 1.0,
+            maxScale: 3.0,
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: _controller!.value.aspectRatio,
+                child: VideoPlayer(_controller!),
+              ),
+            ),
+          ),
+
+          // 暂停时显示播放图标
+          if (!_controller!.value.isPlaying)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(
+                child: Icon(
+                  Icons.play_arrow,
+                  color: Colors.white,
+                  size: 80,
+                ),
+              ),
+            ),
+
+          // 顶部控制栏（返回和全屏按钮）
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: AnimatedOpacity(
+              opacity: (!_controller!.value.isPlaying || _showControls) ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.black.withOpacity(0.7),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                child: Row(
+                  children: [
+                    // 返回按钮
+                    IconButton(
+                      icon: const Icon(Icons.arrow_back, color: Colors.white),
+                      onPressed: () {
+                        if (_isFullScreen) {
+                          _toggleFullScreen();
+                        } else {
+                          Get.back();
+                        }
+                      },
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        _videoTitle,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    // 退出全屏按钮
+                    IconButton(
+                      icon: const Icon(Icons.fullscreen_exit, color: Colors.white),
+                      onPressed: _toggleFullScreen,
+                      style: IconButton.styleFrom(
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          // 底部控制栏和进度条
+          Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: AnimatedOpacity(
+              opacity: (!_controller!.value.isPlaying || _showControls) ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.7),
+                    ],
+                  ),
+                ),
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // 进度条
+                    VideoProgressIndicator(
+                      _controller!,
+                      allowScrubbing: true,
+                      colors: VideoProgressColors(
+                        playedColor: Colors.blue,
+                        bufferedColor: Colors.white.withOpacity(0.3),
+                        backgroundColor: Colors.white.withOpacity(0.2),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // 控制按钮行
+                    Row(
+                      children: [
+                        // 播放/暂停按钮
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (_controller!.value.isPlaying) {
+                                _controller!.pause();
+                                _showControls = true;
+                              } else {
+                                _controller!.play();
+                                _showControls = false;
+                              }
+                            });
+                          },
+                          child: Icon(
+                            _controller!.value.isPlaying
+                                ? Icons.pause_circle_filled
+                                : Icons.play_circle_filled,
+                            color: Colors.white,
+                            size: 40,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+
+                        // 时间显示
+                        Expanded(
+                          child: Text(
+                            '${_formatDuration(_controller!.value.position)} / ${_formatDuration(_controller!.value.duration)}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 15,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
