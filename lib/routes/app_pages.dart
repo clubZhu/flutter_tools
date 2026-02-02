@@ -1,5 +1,7 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:calculator_app/routes/app_routes.dart';
+import 'package:calculator_app/routes/custom_transitions.dart';
 import 'package:calculator_app/pages/splash_page.dart';
 import 'package:calculator_app/pages/home_page.dart';
 import 'package:calculator_app/pages/calculator_page.dart';
@@ -19,63 +21,130 @@ import 'package:calculator_app/controllers/video_recording_controller.dart';
 /// 路由页面配置
 class AppPages {
   static final routes = [
+    // 启动页 - 淡入动画
     GetPage(
       name: AppRoutes.SPLASH,
       page: () => const SplashPage(),
+      transition: Transition.fadeIn,
+      transitionDuration: const Duration(milliseconds: 500),
     ),
-    GetPage(
-      name: AppRoutes.INITIAL,
-      page: () => const HomePage(),
+
+    // 首页 - 淡入缩放动画
+    CustomTransitions.customFadeZoom(
+      page: GetPage(
+        name: AppRoutes.INITIAL,
+        page: () => const HomePage(),
+      ),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
     ),
-    GetPage(
-      name: AppRoutes.CALCULATOR,
-      page: () => const CalculatorPage(),
+
+    // 计算器 - 从右侧滑入
+    CustomTransitions.customSlideFade(
+      page: GetPage(
+        name: AppRoutes.CALCULATOR,
+        page: () => const CalculatorPage(),
+      ),
+      duration: const Duration(milliseconds: 300),
     ),
-    GetPage(
-      name: AppRoutes.CHAT,
-      page: () => const ChatPage(),
+
+    // 聊天页面 - 从底部滑入
+    CustomTransitions.customBottomSlideFade(
+      page: GetPage(
+        name: AppRoutes.CHAT,
+        page: () => const ChatPage(),
+      ),
+      duration: const Duration(milliseconds: 350),
     ),
-    GetPage(
-      name: AppRoutes.ITEM_LIST,
-      page: () => const ItemListPage(),
+
+    // 列表页面 - 从右侧滑入
+    CustomTransitions.customSlideFade(
+      page: GetPage(
+        name: AppRoutes.ITEM_LIST,
+        page: () => const ItemListPage(),
+      ),
+      duration: const Duration(milliseconds: 300),
     ),
-    GetPage(
-      name: AppRoutes.HTML_TEST,
-      page: () => const HtmlTestPage(),
+
+    // HTML测试 - 淡入缩放
+    CustomTransitions.customFadeZoom(
+      page: GetPage(
+        name: AppRoutes.HTML_TEST,
+        page: () => const HtmlTestPage(),
+      ),
+      duration: const Duration(milliseconds: 300),
     ),
-    GetPage(
-      name: AppRoutes.SETTINGS,
-      page: () => const SettingsPage(),
+
+    // 设置页面 - 从右侧滑入
+    CustomTransitions.customSlideFade(
+      page: GetPage(
+        name: AppRoutes.SETTINGS,
+        page: () => const SettingsPage(),
+      ),
+      duration: const Duration(milliseconds: 300),
     ),
-    GetPage(
-      name: AppRoutes.VIDEO_DOWNLOAD,
-      page: () => const VideoDownloadPage(),
+
+    // 视频下载页面 - 从底部滑入（模态页面风格）
+    CustomTransitions.customBottomSlideFade(
+      page: GetPage(
+        name: AppRoutes.VIDEO_DOWNLOAD,
+        page: () => const VideoDownloadPage(),
+      ),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
     ),
-    GetPage(
-      name: AppRoutes.VIDEO_DOWNLOADED,
-      page: () => const VideoDownloadedPage(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<VideoDownloadedController>(() => VideoDownloadedController());
-      }),
+
+    // 视频已下载页面 - 从右侧滑入
+    CustomTransitions.customSlideFade(
+      page: GetPage(
+        name: AppRoutes.VIDEO_DOWNLOADED,
+        page: () => const VideoDownloadedPage(),
+        binding: BindingsBuilder(() {
+          Get.lazyPut<VideoDownloadedController>(() => VideoDownloadedController());
+        }),
+      ),
+      duration: const Duration(milliseconds: 300),
     ),
-    GetPage(
-      name: AppRoutes.WEB_SERVICE,
-      page: () => const WebServicePage(),
+
+    // WebService文件传输 - 从底部滑入
+    CustomTransitions.customBottomSlideFade(
+      page: GetPage(
+        name: AppRoutes.WEB_SERVICE,
+        page: () => const WebServicePage(),
+      ),
+      duration: const Duration(milliseconds: 350),
     ),
-    GetPage(
-      name: AppRoutes.VIDEO_RECORDING,
-      page: () => const VideoRecordingPage(),
+
+    // 视频录制页面 - 淡入缩放（突出重点功能）
+    CustomTransitions.customFadeZoom(
+      page: GetPage(
+        name: AppRoutes.VIDEO_RECORDING,
+        page: () => const VideoRecordingPage(),
+      ),
+      duration: const Duration(milliseconds: 400),
+      curve: Curves.easeOutCubic,
     ),
-    GetPage(
-      name: AppRoutes.VIDEO_PREVIEW,
-      page: () => const CommonVideoPreviewPage(),
+
+    // 视频预览页面 - 从底部滑入（全屏播放）
+    CustomTransitions.customBottomSlideFade(
+      page: GetPage(
+        name: AppRoutes.VIDEO_PREVIEW,
+        page: () => const CommonVideoPreviewPage(),
+      ),
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeOut,
     ),
-    GetPage(
-      name: AppRoutes.VIDEO_HISTORY,
-      page: () => const VideoHistoryPage(),
-      binding: BindingsBuilder(() {
-        Get.lazyPut<VideoRecordingController>(() => VideoRecordingController());
-      }),
+
+    // 视频历史页面 - 从右侧滑入
+    CustomTransitions.customSlideFade(
+      page: GetPage(
+        name: AppRoutes.VIDEO_HISTORY,
+        page: () => const VideoHistoryPage(),
+        binding: BindingsBuilder(() {
+          Get.lazyPut<VideoRecordingController>(() => VideoRecordingController());
+        }),
+      ),
+      duration: const Duration(milliseconds: 300),
     ),
   ];
 }
