@@ -185,7 +185,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           child: _buildStatCard(
                             icon: Icons.history,
                             title: '拍摄相册',
-                            subtitle: '视频录制历史记录',
+                            subtitle: '视频录制历史',
                             color: Colors.green,
                           ),
                         ),
