@@ -297,44 +297,41 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
               width: 1,
             ),
           ),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              return Stack(
-                children: [
-                  // 可点击的饼图
-                  GestureDetector(
-                    key: _pieChartKey,
-                    onTapDown: (details) {
-                      final RenderBox? box = _pieChartKey.currentContext?.findRenderObject() as RenderBox?;
-                      if (box == null) return;
+          child: Center(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return GestureDetector(
+                  key: _pieChartKey,
+                  onTapDown: (details) {
+                    final RenderBox? box = _pieChartKey.currentContext?.findRenderObject() as RenderBox?;
+                    if (box == null) return;
 
-                      final localPosition = box.globalToLocal(details.globalPosition);
-                      final size = box.size;
-                      final center = Offset(size.width / 2, size.height / 2);
-                      final dx = localPosition.dx - center.dx;
-                      final dy = localPosition.dy - center.dy;
-                      final angle = math.atan2(dy, dx);
+                    final localPosition = box.globalToLocal(details.globalPosition);
+                    final size = box.size;
+                    final center = Offset(size.width / 2, size.height / 2);
+                    final dx = localPosition.dx - center.dx;
+                    final dy = localPosition.dy - center.dy;
+                    final angle = math.atan2(dy, dx);
 
-                      // 找到点击的扇形
-                      final clickedIndex = _getTappedSliceIndex(angle);
-                      if (clickedIndex >= 0 && clickedIndex < _features.length) {
-                        _features[clickedIndex].onTap();
-                      }
-                    },
-                    child: SizedBox(
-                      height: 300,
-                      child: CustomPaint(
-                        painter: PieChartPainter(
-                          _features,
-                          animationValue: _pulseController.value,
-                        ),
-                        size: const Size.square(300),
+                    // 找到点击的扇形
+                    final clickedIndex = _getTappedSliceIndex(angle);
+                    if (clickedIndex >= 0 && clickedIndex < _features.length) {
+                      _features[clickedIndex].onTap();
+                    }
+                  },
+                  child: SizedBox(
+                    height: 300,
+                    child: CustomPaint(
+                      painter: PieChartPainter(
+                        _features,
+                        animationValue: _pulseController.value,
                       ),
+                      size: const Size.square(300),
                     ),
                   ),
-                ],
-              );
-            },
+                );
+              },
+            ),
           ),
         );
       },

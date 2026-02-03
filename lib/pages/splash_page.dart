@@ -143,22 +143,15 @@ class _SplashPageState extends State<SplashPage>
                     _buildTitleAnimation(),
                     const SizedBox(height: 16),
 
-                    // 副标题动画
-                    _buildSubtitleAnimation(),
-                    const SizedBox(height: 64),
 
                     // 加载指示器
                     _buildLoadingIndicator(),
                     const SizedBox(height: 24),
 
-                    // 状态文字
-                    _buildStatusText(),
                   ],
                 ),
               ),
             ),
-            // 版本号
-            _buildVersionLabel(),
           ],
         ),
       ),
@@ -290,7 +283,7 @@ class _SplashPageState extends State<SplashPage>
           child: Transform.translate(
             offset: Offset(0, _textSlideAnimation.value),
             child: const Text(
-              '多功能工具箱',
+              'Welcome',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 28,
@@ -304,28 +297,6 @@ class _SplashPageState extends State<SplashPage>
     );
   }
 
-  /// 副标题动画
-  Widget _buildSubtitleAnimation() {
-    return AnimatedBuilder(
-      animation: _textFadeAnimation,
-      builder: (context, child) {
-        return Opacity(
-          opacity: _textFadeAnimation.value * 0.8,
-          child: Transform.translate(
-            offset: Offset(0, _textSlideAnimation.value * 1.2),
-            child: Text(
-              'Multi-Purpose Toolbox',
-              style: TextStyle(
-                fontSize: 14,
-                letterSpacing: 2.0,
-                color: Colors.white.withOpacity(0.8),
-              ),
-            ),
-          ),
-        );
-      },
-    );
-  }
 
   /// 加载指示器
   Widget _buildLoadingIndicator() {
@@ -346,52 +317,6 @@ class _SplashPageState extends State<SplashPage>
     );
   }
 
-  /// 状态文字
-  Widget _buildStatusText() {
-    return AnimatedBuilder(
-      animation: _textFadeAnimation,
-      builder: (context, child) {
-        return Opacity(
-          opacity: _textFadeAnimation.value,
-          child: Text(
-            '正在启动...',
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.9),
-              fontSize: 13,
-              letterSpacing: 1.0,
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  /// 版本号标签
-  Widget _buildVersionLabel() {
-    return Positioned(
-      bottom: 20,
-      left: 0,
-      right: 0,
-      child: Center(
-        child: AnimatedBuilder(
-          animation: _textFadeAnimation,
-          builder: (context, child) {
-            return Opacity(
-              opacity: _textFadeAnimation.value * 0.6,
-              child: Text(
-                'Version 2.1.2',
-                style: TextStyle(
-                  color: Colors.white.withOpacity(0.7),
-                  fontSize: 11,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
 
   @override
   void dispose() {
