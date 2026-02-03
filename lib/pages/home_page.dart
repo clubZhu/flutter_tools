@@ -115,26 +115,13 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            '欢迎使用',
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 14,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            '多功能工具箱',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
+                      const Text(
+                        'Welcome',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       Row(
                         children: [
@@ -263,18 +250,9 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                 );
               },
               child: Icon(
-                _isGridMode ? Icons.grid_view : Icons.pie_chart,
+                _isGridMode ?  Icons.pie_chart: Icons.grid_view,
                 color: Colors.white,
                 size: 20,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              _isGridMode ? '网格' : '饼状',
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -416,16 +394,8 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                   title,
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 20,
+                    fontSize: 15,
                     fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Text(
-                  subtitle,
-                  maxLines: 1,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 12,
                   ),
                 ),
               ],

@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:camera/camera.dart';
+import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
@@ -15,6 +16,9 @@ class VideoRecordingService {
   VideoRecordingService._internal();
 
   final VideoDatabaseService _databaseService = VideoDatabaseService();
+
+  // 前台服务 Method Channel
+  static const _channel = MethodChannel('com.example.untitled1/foreground_service');
 
   CameraController? _controller;
   List<CameraDescription>? _cameras;
@@ -115,6 +119,16 @@ class VideoRecordingService {
       final String videosDir = path.join(appDir.path, 'videos');
       await Directory(videosDir).create(recursive: true);
 
+      // 启动前台服务（支持后台录制）
+      if (Platform.isAndroid) {
+        try {
+          await _channel.invokeMethod('startForegroundService');
+        } catch (e) {
+          print('启动前台服务失败: $e');
+          // 即使前台服务启动失败，也继续录制
+        }
+      }
+
       // 开始录制（使用新的 API）
       await _controller!.startVideoRecording();
       _isRecording = true;
@@ -136,6 +150,15 @@ class VideoRecordingService {
       // 使用新的 API 停止录制
       final XFile videoFile = await _controller!.stopVideoRecording();
       _isRecording = false;
+
+      // 停止前台服务
+      if (Platform.isAndroid) {
+        try {
+          await _channel.invokeMethod('stopForegroundService');
+        } catch (e) {
+          print('停止前台服务失败: $e');
+        }
+      }
 
       // 获取文件信息
       final File file = File(videoFile.path);
@@ -159,6 +182,12 @@ class VideoRecordingService {
     } catch (e) {
       print('停止录制失败: $e');
       _isRecording = false;
+      // 发生错误时也要确保停止前台服务
+      if (Platform.isAndroid) {
+        try {
+          await _channel.invokeMethod('stopForegroundService');
+        } catch (_) {}
+      }
       return null;
     }
   }
@@ -218,6 +247,12 @@ class VideoRecordingService {
     await _controller?.dispose();
     _controller = null;
     _isRecording = false;
+    // 确保停止前台服务
+    if (Platform.isAndroid) {
+      try {
+        await _channel.invokeMethod('stopForegroundService');
+      } catch (_) {}
+    }
   }
 
   /// 更新录制时长

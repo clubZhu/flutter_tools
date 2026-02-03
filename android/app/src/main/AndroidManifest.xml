@@ -53,7 +53,7 @@
 
         <!-- 前台服务（用于后台录制） -->
         <service
-            android:name="com.example.camera.ForegroundService"
+            android:name="com.example.untitled1.ForegroundService"
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="camera|microphone">
