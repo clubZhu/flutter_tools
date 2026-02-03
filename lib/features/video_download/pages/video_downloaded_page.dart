@@ -158,7 +158,7 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
           itemCount: controller.displayedVideos.length,
           itemBuilder: (context, index) {
             final video = controller.displayedVideos[index];
-            return _buildVideoCard(video);
+            return _buildVideoCard(video, index);
           },
         ),
       );
@@ -166,7 +166,7 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
   }
 
   /// 构建视频卡片
-  Widget _buildVideoCard(DownloadedVideoModel video) {
+  Widget _buildVideoCard(DownloadedVideoModel video, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
       decoration: BoxDecoration(
@@ -185,7 +185,7 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: () => _previewVideo(video),
+                onTap: () => _previewVideo(video, index),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -238,7 +238,7 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
                         top: 8,
                         right: 8,
                         child: PopupMenuButton<String>(
-                          onSelected: (value) => _handleVideoMenu(value, video),
+                          onSelected: (value) => _handleVideoMenu(value, video, index),
                           icon: Icon(
                             Icons.more_vert,
                             color: Colors.white.withOpacity(0.9),
@@ -531,10 +531,10 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
   }
 
   /// 处理视频菜单
-  void _handleVideoMenu(String action, DownloadedVideoModel video) {
+  void _handleVideoMenu(String action, DownloadedVideoModel video, int index) {
     switch (action) {
       case 'preview':
-        _previewVideo(video);
+        _previewVideo(video, index);
         break;
       case 'info':
         _showVideoDetails(video);
@@ -546,8 +546,11 @@ class VideoDownloadedPage extends GetView<VideoDownloadedController> {
   }
 
   /// 预览视频
-  void _previewVideo(DownloadedVideoModel video) {
-    Get.toNamed('/video-preview', arguments: video);
+  void _previewVideo(DownloadedVideoModel video, int index) {
+    Get.toNamed('/video-preview', arguments: {
+      'videos': controller.displayedVideos,
+      'index': index,
+    });
   }
 
   /// 显示视频详情

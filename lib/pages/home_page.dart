@@ -128,13 +128,7 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
                           // 布局切换按钮
                           _buildLayoutSwitchButton(),
                           const SizedBox(width: 12),
-                          IconButton(
-                            icon: const Icon(Icons.settings, color: Colors.white),
-                            onPressed: () => AppNavigation.goToSettings(),
-                            style: IconButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.2),
-                            ),
-                          ),
+                          _buildLayoutSettingButton(),
                         ],
                       ),
                     ],
@@ -217,17 +211,59 @@ class _HomePageState extends State<HomePage> with TickerProviderStateMixin {
       },
     );
   }
-
+  Widget _buildLayoutSettingButton() {
+    return GestureDetector(
+      onTap:(){
+        AppNavigation.goToSettings();
+      },
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: Colors.white.withOpacity(0.3),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              transitionBuilder: (child, animation) {
+                return ScaleTransition(
+                  scale: Tween<double>(begin: 0.8, end: 1.0).animate(
+                    CurvedAnimation(
+                      parent: animation,
+                      curve: Curves.easeOut,
+                    ),
+                  ),
+                  child: child,
+                );
+              },
+              child: const Icon(
+                 Icons.settings,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
   /// 构建布局切换按钮
   Widget _buildLayoutSwitchButton() {
     return GestureDetector(
       onTap: _switchLayout,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 9),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.2),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(22),
           border: Border.all(
             color: Colors.white.withOpacity(0.3),
             width: 1,

@@ -213,14 +213,14 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
         itemCount: controller.videoList.length,
         itemBuilder: (context, index) {
           final video = controller.videoList[index];
-          return _buildVideoCard(video);
+          return _buildVideoCard(video, index);
         },
       ),
     );
   }
 
   /// 构建视频卡片
-  Widget _buildVideoCard(VideoRecordingModel video) {
+  Widget _buildVideoCard(VideoRecordingModel video, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
       decoration: BoxDecoration(
@@ -239,7 +239,7 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
             child: Material(
               color: Colors.transparent,
               child: InkWell(
-                onTap: () => _previewVideo(video),
+                onTap: () => _previewVideo(video, index),
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(16),
                   topRight: Radius.circular(16),
@@ -285,7 +285,7 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
                         top: 8,
                         right: 8,
                         child: PopupMenuButton<String>(
-                          onSelected: (value) => _handleMenuAction(value, video),
+                          onSelected: (value) => _handleMenuAction(value, video, index),
                           icon: Icon(
                             Icons.more_vert,
                             color: Colors.white.withOpacity(0.9),
@@ -447,10 +447,10 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
   }
 
   /// 处理菜单操作
-  void _handleMenuAction(String action, VideoRecordingModel video) {
+  void _handleMenuAction(String action, VideoRecordingModel video, int index) {
     switch (action) {
       case 'preview':
-        _previewVideo(video);
+        _previewVideo(video, index);
         break;
       case 'rename':
         _showRenameDialog(video);
@@ -462,8 +462,11 @@ class VideoHistoryPage extends GetView<VideoRecordingController> {
   }
 
   /// 预览视频
-  void _previewVideo(VideoRecordingModel video) {
-    Get.toNamed('/video-preview', arguments: video);
+  void _previewVideo(VideoRecordingModel video, int index) {
+    Get.toNamed('/video-preview', arguments: {
+      'videos': controller.videoList,
+      'index': index,
+    });
   }
 
   /// 显示重命名对话框
