@@ -5,7 +5,7 @@ import 'video_info.dart';
 import 'video_labels.dart';
 import 'video_menu_button.dart';
 
-/// 优化的视频卡片组件 - 使用 AutomaticKeepAliveClientMixin 保持状态
+/// 视频卡片组件 - 简洁舒适的设计
 class VideoCard extends StatefulWidget {
   final DownloadedVideoModel video;
   final int index;
@@ -23,88 +23,134 @@ class VideoCard extends StatefulWidget {
   });
 
   @override
-  State<VideoCard> createState() => VideoCardState();
+  State<VideoCard> createState() => _VideoCardState();
 }
 
-class VideoCardState extends State<VideoCard>
+class _VideoCardState extends State<VideoCard>
     with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true;
 
   @override
   Widget build(BuildContext context) {
-    super.build(context); // 必须调用
+    super.build(context);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12, left: 16, right: 16),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(16),
+        color: Colors.white.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
+          color: Colors.white.withOpacity(0.15),
+          width: 0.5,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: () => widget.onPreview(widget.video, widget.index),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 封面区域
+              _buildCover(context),
+
+              // 信息区域
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: VideoInfo(
+                  video: widget.video,
+                  onShare: () => widget.onShare(widget.video),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      child: Column(
+    );
+  }
+
+  /// 构建封面区域
+  Widget _buildCover(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 16 / 9,
+      child: Stack(
+        fit: StackFit.expand,
         children: [
-          // 封面区域
-          Hero(
-            tag: 'video_cover_${widget.video.id}',
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: () => widget.onPreview(widget.video, widget.index),
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(16),
-                  topRight: Radius.circular(16),
-                ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(16),
-                    topRight: Radius.circular(16),
-                  ),
-                  child: Stack(
-                    children: [
-                      // 封面图 - 使用优化的缩略图加载
-                      AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: VideoThumbnail(video: widget.video),
-                      ),
+          // 缩略图
+          VideoThumbnail(video: widget.video),
 
-                      // 时长标签
-                      if (widget.video.duration != null)
-                        Positioned(
-                          bottom: 8,
-                          right: 8,
-                          child: DurationLabel(duration: widget.video.durationFormatted),
-                        ),
-
-                      // 平台标签
-                      Positioned(
-                        top: 8,
-                        left: 8,
-                        child: PlatformChip(name: widget.video.platformName),
-                      ),
-
-                      // 更多菜单
-                      Positioned(
-                        top: 8,
-                        right: 8,
-                        child: MoreMenuButton(
-                          onSelected: (action) => widget.onMenu(action, widget.video, widget.index),
-                        ),
-                      ),
-                    ],
-                  ),
+          // 渐变遮罩 - 让文字更清晰
+          Positioned.fill(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.3),
+                  ],
+                  stops: const [0.6, 1.0],
                 ),
               ),
             ),
           ),
 
-          // 信息区域
-          VideoInfo(
-            video: widget.video,
-            onShare: () => widget.onShare(widget.video),
+          // 顶部标签栏
+          Positioned(
+            top: 8,
+            left: 8,
+            right: 8,
+            child: Row(
+              children: [
+                // 平台标签
+                PlatformChip(name: widget.video.platformName),
+                const Spacer(),
+                // 更多菜单
+                MoreMenuButton(
+                  onSelected: (action) => widget.onMenu(action, widget.video, widget.index),
+                ),
+              ],
+            ),
+          ),
+
+          // 时长标签
+          if (widget.video.duration != null)
+            Positioned(
+              bottom: 8,
+              right: 8,
+              child: DurationLabel(duration: widget.video.durationFormatted),
+            ),
+
+          // 播放图标提示
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: Center(
+              child: Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.play_arrow,
+                  color: Colors.white70,
+                  size: 24,
+                ),
+              ),
+            ),
           ),
         ],
       ),

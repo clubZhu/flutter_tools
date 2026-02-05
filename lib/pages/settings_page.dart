@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:calculator_app/services/biometric_service.dart';
 import 'package:calculator_app/widgets/app_background.dart';
 
@@ -19,13 +21,18 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _isDeviceSupported = false;
   bool _canCheckBiometrics = false;
   bool _isBiometricEnabled = false;
-  bool _isSetup = false;
   List<BiometricType> _availableBiometrics = [];
+
+  // 缓存相关
+  int _cacheSize = 0;
+  bool _isCalculatingCache = false;
+  bool _isClearingCache = false;
 
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    _loadCacheSize();
   }
 
   Future<void> _loadSettings() async {
@@ -34,22 +41,104 @@ class _SettingsPageState extends State<SettingsPage> {
     final isSupported = await _biometricService.isDeviceSupported();
     final canCheck = await _biometricService.canCheckBiometrics();
     final isEnabled = await _biometricService.isBiometricEnabled();
-    final isSetup = await _biometricService.isBiometricSetup();
     final availableBiometrics = await _biometricService.getAvailableBiometrics();
 
     setState(() {
       _isDeviceSupported = isSupported;
       _canCheckBiometrics = canCheck;
       _isBiometricEnabled = isEnabled;
-      _isSetup = isSetup;
       _availableBiometrics = availableBiometrics;
       _isLoading = false;
     });
   }
 
+  /// 计算缓存大小
+  Future<void> _loadCacheSize() async {
+    setState(() => _isCalculatingCache = true);
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final cacheDir = Directory(tempDir.path);
+
+      if (await cacheDir.exists()) {
+        _cacheSize = await _calculateCacheSize(cacheDir);
+      }
+    } catch (e) {
+      _cacheSize = 0;
+    }
+    setState(() => _isCalculatingCache = false);
+  }
+
+  /// 计算目录大小
+  Future<int> _calculateCacheSize(Directory dir) async {
+    int totalSize = 0;
+
+    try {
+      await for (final entity in dir.list(recursive: true, followLinks: false)) {
+        if (entity is File) {
+          totalSize += await entity.length();
+        }
+      }
+    } catch (e) {
+      // 忽略无权限的文件
+    }
+
+    return totalSize;
+  }
+
+  /// 格式化文件大小
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) {
+      return '$bytes B';
+    } else if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    } else if (bytes < 1024 * 1024 * 1024) {
+      return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+    } else {
+      return '${(bytes / (1024 * 1024 * 1024)).toStringAsFixed(2)} GB';
+    }
+  }
+
+  /// 清理缓存
+  Future<void> _clearCache() async {
+    setState(() => _isClearingCache = true);
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final cacheDir = Directory(tempDir.path);
+
+      if (await cacheDir.exists()) {
+        await _deleteDirectory(cacheDir);
+      }
+
+      // 重新计算缓存
+      await _loadCacheSize();
+
+      Get.snackbar(
+        '成功',
+        '缓存已清理',
+        backgroundColor: Colors.green.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        '错误',
+        '清理缓存失败: $e',
+        backgroundColor: Colors.red.withOpacity(0.9),
+        colorText: Colors.white,
+      );
+    } finally {
+      setState(() => _isClearingCache = false);
+    }
+  }
+
+  /// 递归删除目录
+  Future<void> _deleteDirectory(Directory dir) async {
+    if (await dir.exists()) {
+      await dir.delete(recursive: true);
+    }
+  }
+
   Future<void> _toggleBiometric(bool value) async {
     if (value) {
-      // 启用生物识别，先进行验证
       final success = await _biometricService.authenticate(
         localizedReason: '请验证身份以启用生物识别',
       );
@@ -63,7 +152,6 @@ class _SettingsPageState extends State<SettingsPage> {
         _showSnackBar('验证失败，未启用生物识别');
       }
     } else {
-      // 禁用生物识别，需要验证
       final success = await _biometricService.authenticate(
         localizedReason: '请验证身份以禁用生物识别',
       );
@@ -102,7 +190,7 @@ class _SettingsPageState extends State<SettingsPage> {
       body: AppBackground(
         child: Column(
           children: [
-            SizedBox(height: 20,),
+            const SizedBox(height: 20),
             // 自定义 AppBar
             _buildAppBar(),
 
@@ -122,6 +210,9 @@ class _SettingsPageState extends State<SettingsPage> {
                                 children: [
                                   // 生物识别卡片
                                   _buildBiometricCard(),
+                                  const SizedBox(height: 16),
+                                  // 缓存管理卡片
+                                  _buildCacheCard(),
                                   const SizedBox(height: 16),
                                   // 安全提示
                                   _buildSecurityTip(),
@@ -169,6 +260,113 @@ class _SettingsPageState extends State<SettingsPage> {
     );
   }
 
+  /// 构建缓存管理卡片
+  Widget _buildCacheCard() {
+    return AppGlassCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.blue.withOpacity(0.4),
+                    width: 1,
+                  ),
+                ),
+                child: _isCalculatingCache
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                        ),
+                      )
+                    : const Icon(
+                        Icons.storage_rounded,
+                        size: 28,
+                        color: Colors.white,
+                      ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      '缓存管理',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _isCalculatingCache
+                          ? '正在计算缓存大小...'
+                          : '缓存占用: ${_formatFileSize(_cacheSize)}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withOpacity(0.8),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // 清理按钮
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: _isClearingCache ? null : _clearCache,
+                  icon: _isClearingCache
+                      ? const SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                          ),
+                        )
+                      : const Icon(Icons.cleaning_services_rounded, size: 20),
+                  label: Text(
+                    _isClearingCache ? '清理中...' : '清理缓存',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.white,
+                    side: BorderSide(
+                      color: Colors.white.withOpacity(0.5),
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Icon(
+                Icons.info_outline,
+                color: Colors.white.withOpacity(0.6),
+                size: 20,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBiometricCard() {
     return AppGlassCard(
       child: Column(
@@ -201,9 +399,9 @@ class _SettingsPageState extends State<SettingsPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
+                    const Text(
                       '生物识别登录',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
@@ -232,7 +430,7 @@ class _SettingsPageState extends State<SettingsPage> {
               spacing: 8,
               children: _availableBiometrics.map((type) {
                 return Chip(
-                  avatar: Icon(
+                  avatar: const Icon(
                     Icons.check_circle,
                     size: 18,
                     color: Colors.green,
@@ -298,44 +496,64 @@ class _SettingsPageState extends State<SettingsPage> {
     required String message,
     required Color color,
   }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.2),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: color.withOpacity(0.5),
-          width: 1,
-        ),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white, size: 20),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  message,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.white.withOpacity(0.8),
-                  ),
-                ),
-              ],
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: const Duration(milliseconds: 600),
+      curve: Curves.easeOutCubic,
+      builder: (context, value, child) {
+        return Transform.translate(
+          offset: Offset(0, 20 * (1 - value)),
+          child: Opacity(
+            opacity: value,
+            child: ClipRect(
+              child: Align(
+                heightFactor: value,
+                alignment: Alignment.topCenter,
+                child: child,
+              ),
             ),
           ),
-        ],
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withOpacity(0.5),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      fontSize: 14,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    message,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -353,7 +571,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 size: 24,
               ),
               const SizedBox(width: 12),
-              Text(
+              const Text(
                 '安全说明',
                 style: TextStyle(
                   fontSize: 16,

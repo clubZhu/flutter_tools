@@ -122,31 +122,11 @@ class _WebServicePageState extends State<WebServicePage>
       _isStarting = true;
     });
 
-    final success = await _server.startServer(port: 8080);
+    await _server.startServer(port: 8080);
 
     setState(() {
       _isStarting = false;
     });
-
-    if (success && mounted) {
-      Get.snackbar(
-        '成功',
-        '服务器已启动',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green.withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
-    } else if (mounted) {
-      Get.snackbar(
-        '失败',
-        '服务器启动失败',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red.withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
-    }
   }
 
   /// 停止服务器
@@ -160,17 +140,6 @@ class _WebServicePageState extends State<WebServicePage>
     setState(() {
       _isStopping = false;
     });
-
-    if (success && mounted) {
-      Get.snackbar(
-        '成功',
-        '服务器已停止',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.orange.withOpacity(0.9),
-        colorText: Colors.white,
-        duration: const Duration(seconds: 2),
-      );
-    }
   }
 
   @override
@@ -250,80 +219,82 @@ class _WebServicePageState extends State<WebServicePage>
       child: Column(
         children: [
           // 呼吸动画指示器
-          Stack(
-            alignment: Alignment.center,
-            children: [
-              if (_server.isRunning) ...[
-                // 外圈呼吸效果
-                ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: FadeTransition(
-                    opacity: _opacityAnimation,
-                    child: Container(
-                      width: 110,
-                      height: 110,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            Colors.white.withOpacity(0.3),
-                            Colors.white.withOpacity(0.1),
-                          ],
+          SizedBox(height: 110,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (_server.isRunning) ...[
+                  // 外圈呼吸效果
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: FadeTransition(
+                      opacity: _opacityAnimation,
+                      child: Container(
+                        width: 110,
+                        height: 110,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.3),
+                              Colors.white.withOpacity(0.1),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-                // 中圈呼吸效果
-                ScaleTransition(
-                  scale: _scaleAnimation,
-                  child: FadeTransition(
-                    opacity: _opacityAnimation,
-                    child: Container(
-                      width: 85,
-                      height: 85,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        gradient: RadialGradient(
-                          colors: [
-                            Colors.white.withOpacity(0.4),
-                            Colors.white.withOpacity(0.15),
-                          ],
+                  // 中圈呼吸效果
+                  ScaleTransition(
+                    scale: _scaleAnimation,
+                    child: FadeTransition(
+                      opacity: _opacityAnimation,
+                      child: Container(
+                        width: 85,
+                        height: 85,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: RadialGradient(
+                            colors: [
+                              Colors.white.withOpacity(0.4),
+                              Colors.white.withOpacity(0.15),
+                            ],
+                          ),
                         ),
                       ),
                     ),
+                  ),
+                ],
+                // 中心图标
+                Container(
+                  width: 70,
+                  height: 70,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: _server.isRunning
+                          ? [Colors.green.shade400, Colors.green.shade600]
+                          : [Colors.grey.shade300, Colors.grey.shade400],
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (_server.isRunning ? Colors.green : Colors.grey).withOpacity(0.4),
+                        blurRadius: 16,
+                        spreadRadius: 3,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    _server.isRunning ? Icons.cloud_done : Icons.cloud_off,
+                    size: 38,
+                    color: Colors.white,
                   ),
                 ),
               ],
-              // 中心图标
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: _server.isRunning
-                        ? [Colors.green.shade400, Colors.green.shade600]
-                        : [Colors.grey.shade300, Colors.grey.shade400],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: (_server.isRunning ? Colors.green : Colors.grey).withOpacity(0.4),
-                      blurRadius: 16,
-                      spreadRadius: 3,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Icon(
-                  _server.isRunning ? Icons.cloud_done : Icons.cloud_off,
-                  size: 38,
-                  color: Colors.white,
-                ),
-              ),
-            ],
+            ),
           ),
           const SizedBox(height: 24),
 
@@ -339,73 +310,72 @@ class _WebServicePageState extends State<WebServicePage>
           ),
           const SizedBox(height: 10),
           if(_server.isRunning)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.2),
-                    width: 1,
+            Container(
+              height: 40,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Colors.white.withOpacity(0.2),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.link,
+                    size: 16,
+                    color: Colors.white.withOpacity(0.6),
                   ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.link,
-                      size: 16,
-                      color: Colors.white.withOpacity(0.6),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: SelectableText(
+                      _server.serverUrl??'',
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.9),
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: SelectableText(
-                        _server.serverUrl??'',
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 13,
+                  ),
+                  const SizedBox(width: 8),
+                  Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () {
+                        Clipboard.setData(ClipboardData(text: _server.serverUrl??''));
+                        Get.snackbar(
+                          '已复制',
+                          '地址已复制到剪贴板',
+                          duration: const Duration(seconds: 2),
+                          backgroundColor: Colors.green.withOpacity(0.9),
+                          colorText: Colors.white,
+                        );
+                      },
+                      borderRadius: BorderRadius.circular(8),
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.copy,
+                          size: 16,
                           color: Colors.white.withOpacity(0.9),
-                          letterSpacing: 0.5,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
-                    Material(
-                      color: Colors.transparent,
-                      child: InkWell(
-                        onTap: () {
-                          Clipboard.setData(ClipboardData(text: _server.serverUrl??''));
-                          Get.snackbar(
-                            '已复制',
-                            '地址已复制到剪贴板',
-                            duration: const Duration(seconds: 2),
-                            backgroundColor: Colors.green.withOpacity(0.9),
-                            colorText: Colors.white,
-                          );
-                        },
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.all(6),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.copy,
-                            size: 16,
-                            color: Colors.white.withOpacity(0.9),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           // 端口信息
           if(!_server.isRunning)
           Container(
+            height: 40,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.2),
@@ -832,102 +802,56 @@ class _WebServicePageState extends State<WebServicePage>
 
   /// 控制按钮
   Widget _buildControlButtons() {
-    return Row(
-      children: [
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.green.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
+    final isRunning = _server.isRunning;
+    final isProcessing = _isStarting || _isStopping;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: (isRunning ? Colors.red : Colors.green).withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: isProcessing
+            ? null
+            : isRunning
+                ? _stopServer
+                : _startServer,
+        style: ElevatedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          backgroundColor: isRunning ? Colors.red : Colors.green,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+        ),
+        icon: isProcessing
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
                 ),
-              ],
-            ),
-            child: ElevatedButton.icon(
-              onPressed: _server.isRunning || _isStarting
-                  ? null
-                  : _startServer,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey[300],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              icon: _isStarting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.play_arrow, size: 24),
-              label: Text(
-                _isStarting ? '启动中...' : '启动服务',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
+              )
+            : Icon(isRunning ? Icons.stop : Icons.play_arrow, size: 24),
+        label: Text(
+          isProcessing
+              ? (_isStarting ? '启动中...' : '停止中...')
+              : (isRunning ? '停止服务' : '启动服务'),
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.red.withOpacity(0.3),
-                  blurRadius: 8,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ElevatedButton.icon(
-              onPressed: !_server.isRunning || _isStopping
-                  ? null
-                  : _stopServer,
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                disabledBackgroundColor: Colors.grey[300],
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                elevation: 0,
-              ),
-              icon: _isStopping
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.stop, size: 24),
-              label: Text(
-                _isStopping ? '停止中...' : '停止服务',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
+      ),
     );
   }
 
