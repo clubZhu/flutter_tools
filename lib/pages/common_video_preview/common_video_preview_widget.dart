@@ -159,7 +159,7 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
   Widget _buildAppBar() {
     return Obx(() {
       return Container(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16,8),
         child: Row(
           children: [
             IconButton(
@@ -173,6 +173,7 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
                     controller.videoTitle,
@@ -184,12 +185,15 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  const SizedBox(height: 4),
                   Text(
                     controller.videoSubtitle,
                     style: TextStyle(
                       color: Colors.white.withOpacity(0.7),
                       fontSize: 12,
                     ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
