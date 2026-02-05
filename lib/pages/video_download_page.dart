@@ -522,6 +522,7 @@ class _VideoDownloadPageState extends State<VideoDownloadPage>
     return AppGlassCard(
       padding: const EdgeInsets.all(12),
       child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -542,15 +543,20 @@ class _VideoDownloadPageState extends State<VideoDownloadPage>
             ],
           ),
           const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          Row(
             children: [
-              _buildPlatformChip('抖音', Icons.music_note),
-              _buildPlatformChip('TikTok', Icons.music_video),
-              _buildPlatformChip('B站', Icons.tv),
-              _buildPlatformChip('微博', Icons.wechat),
-              _buildPlatformChip('快手', Icons.video_library),
+              Wrap(
+                alignment: WrapAlignment.start,
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _buildPlatformChip('抖音', Icons.music_note),
+                  _buildPlatformChip('TikTok', Icons.music_video),
+                  _buildPlatformChip('B站', Icons.tv),
+                  _buildPlatformChip('微博', Icons.wechat),
+                  _buildPlatformChip('快手', Icons.video_library),
+                ],
+              ),
             ],
           ),
         ],
@@ -573,8 +579,7 @@ class _VideoDownloadPageState extends State<VideoDownloadPage>
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: Colors.white),
-          const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 12, color: Colors.white)),
+
         ],
       ),
     );
@@ -662,12 +667,9 @@ class _VideoDownloadPageState extends State<VideoDownloadPage>
                     height: 1.5,
                   ),
                   decoration: InputDecoration(
-                    hintText: '请粘贴抖音、TikTok等平台的视频分享链接...\n\n'
-                        '支持平台:\n'
-                        '• 抖音 / TikTok\n'
-                        '• B站 / 微博 / 快手',
+                    hintText: '请粘贴是地址',
                     hintStyle: TextStyle(
-                      color: Colors.white.withOpacity(0.4),
+                      color: Colors.white.withOpacity(0.6),
                       fontSize: 13,
                     ),
                     border: InputBorder.none,

@@ -193,19 +193,9 @@ class _WebServicePageState extends State<WebServicePage>
                       // 服务状态卡片
                       _buildStatusCard(),
                       const SizedBox(height: 20),
-
-                      // 服务地址卡片
-                      if (_server.isRunning) ...[
-                        _buildServerAddressCard(),
-                        const SizedBox(height: 20),
-                        _buildUploadDirectoryCard(),
-                        const SizedBox(height: 20),
-                      ],
-
                       // 控制按钮
                       _buildControlButtons(),
                       const SizedBox(height: 20),
-
                       // 上传文件列表
                       _buildUploadedFilesSection(),
                     ],
@@ -348,8 +338,73 @@ class _WebServicePageState extends State<WebServicePage>
             ),
           ),
           const SizedBox(height: 10),
-
+          if(_server.isRunning)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.2),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.link,
+                      size: 16,
+                      color: Colors.white.withOpacity(0.6),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: SelectableText(
+                        _server.serverUrl??'',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 13,
+                          color: Colors.white.withOpacity(0.9),
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: () {
+                          Clipboard.setData(ClipboardData(text: _server.serverUrl??''));
+                          Get.snackbar(
+                            '已复制',
+                            '地址已复制到剪贴板',
+                            duration: const Duration(seconds: 2),
+                            backgroundColor: Colors.green.withOpacity(0.9),
+                            colorText: Colors.white,
+                          );
+                        },
+                        borderRadius: BorderRadius.circular(8),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.copy,
+                            size: 16,
+                            color: Colors.white.withOpacity(0.9),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           // 端口信息
+          if(!_server.isRunning)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             decoration: BoxDecoration(
@@ -361,7 +416,7 @@ class _WebServicePageState extends State<WebServicePage>
               ),
             ),
             child: Text(
-              '端口: ${_server.isRunning ? '8080' : '未启动'}',
+              '端口: ${ '未启动'}',
               style: TextStyle(
                 fontSize: 14,
                 color: Colors.white.withOpacity(0.9),
