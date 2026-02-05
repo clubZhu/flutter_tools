@@ -1,12 +1,11 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
 import '../../../features/video_download/models/downloaded_video_model.dart';
 import '../../../models/video_recording_model.dart';
 
-/// 视频预览控制器 - 使用 GetX 状态管理
+/// iOS 相册风格视频预览控制器
 class CommonVideoPreviewController extends GetxController {
   // 视频列表
   final RxList<dynamic> videos = <dynamic>[].obs;
@@ -25,18 +24,16 @@ class CommonVideoPreviewController extends GetxController {
       ? '${currentVideo?.durationFormatted ?? ''} · ${currentVideo?.fileSizeFormatted ?? ''}'
       : '${currentVideo?.author ?? ''} · ${currentVideo?.durationFormatted ?? ''}';
   String get videoPath => isRecordingVideo ? currentVideo?.filePath ?? '' : currentVideo?.localPath ?? '';
-  String get heroTag => isRecordingVideo
-      ? 'recording_cover_${currentVideo?.id ?? ''}'
-      : 'video_cover_${currentVideo?.id ?? ''}';
 
-  // 视频播放器
-  final Rx<VideoPlayerController?> controller = Rx<VideoPlayerController?>(null);
+  // PageController 用于 PageView
+  late PageController pageController;
+
+  // 视频播放器缓存（每个视频一个控制器）
+  final Map<int, VideoPlayerController> _videoControllers = {};
+  final RxBool _isControllersReady = false.obs;
 
   // 状态
-  final RxBool isInitialized = false.obs;
-  final RxBool hasError = false.obs;
   final RxBool showControls = false.obs;
-  final RxBool isFullScreen = false.obs;
   final RxBool isScrubbing = false.obs;
   final RxDouble scrubPosition = 0.0.obs;
   final RxBool wasPlayingBeforeScrubbing = false.obs;
@@ -47,36 +44,31 @@ class CommonVideoPreviewController extends GetxController {
   // 进度条 key
   final GlobalKey progressBarKey = GlobalKey();
 
-  // PageController 用于 PageView
-  late PageController pageController;
-
   @override
   void onInit() {
     super.onInit();
     transformationController = TransformationController();
-    // 先解析参数，设置好 currentIndex
     _parseArguments();
-    // 再用正确的索引创建 PageController
-    pageController = PageController(initialPage: currentIndex.value);
-    _initializeVideo();
+    // 初始化 PageController
+    pageController = PageController(initialPage: currentIndex.value, viewportFraction: 1.0);
+    _initializeControllers();
   }
 
   @override
   void onClose() {
-    controller.value?.dispose();
+    // 释放所有视频控制器
+    for (var controller in _videoControllers.values) {
+      controller.dispose();
+    }
+    _videoControllers.clear();
     transformationController.dispose();
     pageController.dispose();
-    _restoreScreenOrientation();
     super.onClose();
   }
 
   /// 解析路由参数
   void _parseArguments() {
     final arguments = Get.arguments;
-
-    // 支持两种传参方式：
-    // 1. 单个视频对象
-    // 2. 包含视频列表和索引的 Map: {'videos': [...], 'index': 0}
 
     if (arguments is Map) {
       final videoList = arguments['videos'];
@@ -99,81 +91,74 @@ class CommonVideoPreviewController extends GetxController {
     }
   }
 
-  /// 初始化视频
-  Future<void> _initializeVideo({bool autoPlay = true}) async {
-    if (videoPath.isEmpty) {
-      hasError.value = true;
-      return;
+  /// 初始化视频控制器
+  Future<void> _initializeControllers() async {
+    // 预加载当前、上一个、下一个视频
+    final indexesToLoad = [currentIndex.value];
+    if (currentIndex.value > 0) {
+      indexesToLoad.add(currentIndex.value - 1);
     }
+    if (currentIndex.value < videos.value.length - 1) {
+      indexesToLoad.add(currentIndex.value + 1);
+    }
+
+    for (var index in indexesToLoad) {
+      await _initializeController(index);
+    }
+
+    _isControllersReady.value = true;
+    // 自动播放当前视频
+    final currentController = _videoControllers[currentIndex.value];
+    if (currentController != null) {
+      currentController.play();
+    }
+  }
+
+  /// 初始化单个视频控制器
+  Future<void> _initializeController(int index) async {
+    if (_videoControllers.containsKey(index)) return;
+
+    final video = videos.value[index];
+    final path = isRecordingVideo
+        ? (video as VideoRecordingModel).filePath
+        : (video as DownloadedVideoModel).localPath;
+
+    if (path.isEmpty) return;
 
     try {
-      final file = File(videoPath);
+      final file = File(path);
       if (await file.exists()) {
-        controller.value = VideoPlayerController.file(file);
-        await controller.value!.initialize();
-
-        controller.value!.addListener(() {
-          // 使用 update() 而不是 setState()
-          // GetX 会自动监听 VideoPlayerController 的变化
-        });
-
-        isInitialized.value = true;
-
-        // 只在需要时自动播放
-        if (autoPlay) {
-          controller.value!.play();
-        }
-      } else {
-        hasError.value = true;
+        final controller = VideoPlayerController.file(file);
+        await controller.initialize();
+        _videoControllers[index] = controller;
       }
     } catch (e) {
-      hasError.value = true;
+      print('初始化视频失败: $e');
     }
+  }
+
+  /// 获取指定索引的视频控制器
+  VideoPlayerController? getVideoController(int index) {
+    return _videoControllers[index];
   }
 
   /// 切换到上一个视频
   void previousVideo() {
     if (currentIndex.value > 0) {
-      _changeVideo(currentIndex.value - 1);
+      pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
   /// 切换到下一个视频
   void nextVideo() {
     if (currentIndex.value < videos.value.length - 1) {
-      _changeVideo(currentIndex.value + 1);
-    }
-  }
-
-  /// 切换视频
-  void _changeVideo(int index) async {
-    // 释放当前视频资源
-    await controller.value?.pause();
-    await controller.value?.dispose();
-    controller.value = null;
-
-    // 重置状态
-    isInitialized.value = false;
-    hasError.value = false;
-    showControls.value = false;
-    isScrubbing.value = false;
-    scrubPosition.value = 0.0;
-
-    // 重置缩放
-    transformationController.value = Matrix4.identity();
-
-    // 更新索引
-    currentIndex.value = index;
-
-    // 初始化新视频（自动播放）
-    await _initializeVideo(autoPlay: true);
-  }
-
-  /// PageView 页面变化回调
-  void onPageChanged(int index) {
-    // 只有当索引真正改变时才切换视频
-    if (index != currentIndex.value) {
-      _changeVideo(index);
+      pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -181,42 +166,63 @@ class CommonVideoPreviewController extends GetxController {
   bool get canGoPrevious => currentIndex.value > 0;
   bool get canGoNext => currentIndex.value < videos.value.length - 1;
 
+  /// 页面变化回调
+  void onPageChanged(int index) {
+    // 暂停旧视频
+    final oldController = _videoControllers[currentIndex.value];
+    if (oldController != null) {
+      oldController.pause();
+    }
+
+    // 更新索引
+    currentIndex.value = index;
+
+    // 播放新视频
+    final newController = _videoControllers[index];
+    if (newController != null) {
+      newController.play();
+    }
+
+    // 预加载相邻视频
+    _preloadAdjacentVideos();
+  }
+
+  /// 预加载相邻视频
+  void _preloadAdjacentVideos() async {
+    // 加载下一个
+    if (currentIndex.value < videos.value.length - 1) {
+      await _initializeController(currentIndex.value + 1);
+    }
+    // 加载上一个
+    if (currentIndex.value > 0) {
+      await _initializeController(currentIndex.value - 1);
+    }
+
+    // 释放远离的视频控制器（节省内存）
+    final toRemove = <int>[];
+    for (var key in _videoControllers.keys) {
+      if ((key - currentIndex.value).abs() > 2) {
+        toRemove.add(key);
+      }
+    }
+    for (var key in toRemove) {
+      _videoControllers[key]?.dispose();
+      _videoControllers.remove(key);
+    }
+  }
+
   /// 切换播放/暂停
   void togglePlayPause() {
-    if (controller.value == null) return;
+    final controller = _videoControllers[currentIndex.value];
+    if (controller == null) return;
 
-    if (controller.value!.value.isPlaying) {
-      controller.value!.pause();
+    if (controller.value.isPlaying) {
+      controller.pause();
       showControls.value = true;
     } else {
-      controller.value!.play();
+      controller.play();
       showControls.value = false;
     }
-  }
-
-  /// 切换全屏
-  void toggleFullScreen() {
-    isFullScreen.value = !isFullScreen.value;
-
-    if (isFullScreen.value) {
-      SystemChrome.setPreferredOrientations([
-        DeviceOrientation.landscapeLeft,
-        DeviceOrientation.landscapeRight,
-      ]);
-      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    } else {
-      _restoreScreenOrientation();
-      transformationController.value = Matrix4.identity();
-    }
-  }
-
-  /// 恢复屏幕方向
-  void _restoreScreenOrientation() {
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
   }
 
   /// 更新进度条位置
@@ -229,8 +235,9 @@ class CommonVideoPreviewController extends GetxController {
       final localPosition = renderBox.globalToLocal(globalPosition);
       final double ratio = (localPosition.dx / renderBox.size.width).clamp(0.0, 1.0);
 
-      if (controller.value != null) {
-        final duration = controller.value!.value.duration.inMilliseconds.toDouble();
+      final controller = _videoControllers[currentIndex.value];
+      if (controller != null) {
+        final duration = controller.value.duration.inMilliseconds.toDouble();
         scrubPosition.value = ratio * duration;
       }
     } catch (e) {
@@ -240,10 +247,12 @@ class CommonVideoPreviewController extends GetxController {
 
   /// 开始拖动进度条
   void startScrubbing(Offset globalPosition) {
-    if (controller.value == null) return;
-    wasPlayingBeforeScrubbing.value = controller.value!.value.isPlaying;
+    final controller = _videoControllers[currentIndex.value];
+    if (controller == null) return;
+
+    wasPlayingBeforeScrubbing.value = controller.value.isPlaying;
     isScrubbing.value = true;
-    controller.value!.pause();
+    controller.pause();
     updateScrubPosition(globalPosition);
   }
 
@@ -254,11 +263,13 @@ class CommonVideoPreviewController extends GetxController {
 
   /// 结束拖动
   void endScrubbing() {
-    if (controller.value == null) return;
-    controller.value!.seekTo(Duration(milliseconds: scrubPosition.value.toInt()));
+    final controller = _videoControllers[currentIndex.value];
+    if (controller == null) return;
+
+    controller.seekTo(Duration(milliseconds: scrubPosition.value.toInt()));
     isScrubbing.value = false;
     if (wasPlayingBeforeScrubbing.value) {
-      controller.value!.play();
+      controller.play();
     }
   }
 
@@ -275,33 +286,41 @@ class CommonVideoPreviewController extends GetxController {
 
   /// 获取当前播放位置
   double get currentPosition {
-    if (controller.value == null) return 0.0;
+    final controller = _videoControllers[currentIndex.value];
+    if (controller == null) return 0.0;
     return isScrubbing.value
         ? scrubPosition.value
-        : controller.value!.value.position.inMilliseconds.toDouble();
+        : controller.value.position.inMilliseconds.toDouble();
   }
 
   /// 获取总时长
   double get totalDuration {
-    if (controller.value == null) return 0.0;
-    return controller.value!.value.duration.inMilliseconds.toDouble();
+    final controller = _videoControllers[currentIndex.value];
+    if (controller == null) return 0.0;
+    return controller.value.duration.inMilliseconds.toDouble();
   }
 
   /// 获取缓冲位置
   double get bufferedPosition {
-    if (controller.value == null) return 0.0;
-    return controller.value!.value.buffered.isNotEmpty
-        ? controller.value!.value.buffered.last.end.inMilliseconds.toDouble()
+    final controller = _videoControllers[currentIndex.value];
+    if (controller == null) return 0.0;
+    return controller.value.buffered.isNotEmpty
+        ? controller.value.buffered.last.end.inMilliseconds.toDouble()
         : 0.0;
   }
 
   /// 是否正在播放
   bool get isPlaying {
-    return controller.value?.value.isPlaying ?? false;
+    final controller = _videoControllers[currentIndex.value];
+    return controller?.value.isPlaying ?? false;
   }
 
   /// 获取当前时长
   Duration get duration {
-    return controller.value?.value.duration ?? Duration.zero;
+    final controller = _videoControllers[currentIndex.value];
+    return controller?.value.duration ?? Duration.zero;
   }
+
+  /// 是否已准备好
+  bool get isControllersReady => _isControllersReady.value;
 }

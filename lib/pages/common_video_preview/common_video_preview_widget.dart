@@ -18,9 +18,7 @@ class CommonVideoPreviewWidget extends StatefulWidget {
 
 class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
   late final CommonVideoPreviewController controller;
-  double _dragStartX = 0.0;
-  double _currentDragX = 0.0;
-  final double _dragThreshold = 100.0;
+  double _currentPage = 0.0;
 
   @override
   void initState() {
@@ -36,34 +34,25 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       body: Obx(() {
-        // 全屏模式
-        if (controller.isFullScreen.value) {
-          return _buildFullScreenPlayer();
-        }
-
         // 自定义 child 模式
         if (widget.child != null) {
           return Scaffold(
-            backgroundColor: Colors.black,
             body: widget.child!,
           );
         }
 
-        // 正常模式
+        // 正常模式 - iOS 相册风格
         return Scaffold(
-          backgroundColor: Colors.black,
           body: AppBackground(
-            child: SafeArea(
-              child: Column(
-                children: [
-                  _buildAppBar(),
-                  Expanded(
-                    child: _buildVideoPlayer(),
-                  ),
-                ],
-              ),
+            child: Column(
+              children: [
+                const SizedBox(height: 30,),
+                _buildAppBar(),
+                Expanded(
+                  child: _buildiOSStyleGallery(),
+                ),
+              ],
             ),
           ),
         );
@@ -71,284 +60,99 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
     );
   }
 
-  /// 构建视频播放器（使用 PageView）
-  Widget _buildVideoPlayer() {
+  /// 构建 iOS 相册风格视频列表
+  Widget _buildiOSStyleGallery() {
+    return NotificationListener<ScrollNotification>(
+      onNotification: (notification) {
+        if (notification is ScrollUpdateNotification) {
+          setState(() {
+            _currentPage = controller.pageController.page ?? controller.currentIndex.value.toDouble();
+          });
+        }
+        return false;
+      },
+      child: PageView.builder(
+        controller: controller.pageController,
+        onPageChanged: controller.onPageChanged,
+        itemCount: controller.videos.length,
+        itemBuilder: (context, index) {
+          return _buildiOSVideoPage(index);
+        },
+      ),
+    );
+  }
+
+  /// 构建 iOS 风格视频页面
+  Widget _buildiOSVideoPage(int index) {
     return Obx(() {
-      // 如果视频列表为空
-      if (controller.videos.isEmpty) {
+      if (!controller.isControllersReady) {
         return const Center(
-          child: Text(
-            '没有视频',
-            style: TextStyle(color: Colors.white, fontSize: 16),
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
           ),
         );
       }
 
-      return GestureDetector(
-        // 水平拖动手势用于翻页
-        onHorizontalDragStart: (details) {
-          _dragStartX = details.globalPosition.dx;
-        },
-        onHorizontalDragUpdate: (details) {
-          _currentDragX = details.globalPosition.dx;
-        },
-        onHorizontalDragEnd: (details) {
-          final dragDistance = _currentDragX - _dragStartX;
+      final videoController = controller.getVideoController(index);
+      final isCurrentPage = index == controller.currentIndex.value;
 
-          // 只有在拖动距离超过阈值且没有缩放时才翻页
-          final scale = controller.transformationController.value.getMaxScaleOnAxis();
-          if (dragDistance.abs() > _dragThreshold && scale == 1.0) {
-            if (dragDistance > 0 && controller.canGoPrevious) {
-              controller.pageController.previousPage(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            } else if (dragDistance < 0 && controller.canGoNext) {
-              controller.pageController.nextPage(
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeInOut,
-              );
-            }
-          }
-        },
-        child: PageView.builder(
-          controller: controller.pageController,
-          onPageChanged: controller.onPageChanged,
-          physics: const NeverScrollableScrollPhysics(), // 禁用默认滑动
-          itemCount: controller.videos.length,
-          itemBuilder: (context, index) {
-            return _buildVideoPage(index);
-          },
-        ),
-      );
+      return _buildVideoContent(index, videoController, isCurrentPage);
     });
   }
 
-  /// 构建单个视频页面
-  Widget _buildVideoPage(int index) {
-    return Obx(() {
-      // 只显示当前索引页面的视频，其他页面显示黑色背景
-      if (index != controller.currentIndex.value) {
-        return Container(color: Colors.black);
-      }
+  /// 构建视频内容
+  Widget _buildVideoContent(int index, VideoPlayerController? videoController, bool isCurrentPage) {
+    if (videoController == null || !videoController.value.isInitialized) {
+      return const SizedBox.expand();
+    }
 
-      // 显示加载或错误状态
-      if (controller.hasError.value) {
-        return Container(
-          color: Colors.black,
-          child: Center(child: _buildErrorView()),
-        );
-      }
-
-      if (!controller.isInitialized.value) {
-        return Container(
-          color: Colors.black,
-          child: const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          ),
-        );
-      }
-
-      final videoController = controller.controller.value;
-      if (videoController == null) {
-        return Container(
-          color: Colors.black,
-          child: const Center(
-            child: CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            ),
-          ),
-        );
-      }
-
-      return Stack(
-        children: [
-          // 视频播放器 - 支持缩放
-          Positioned.fill(
-            child: GestureDetector(
-              onDoubleTap: controller.togglePlayPause,
-              onTap: () {
-                controller.showControls.value = !controller.showControls.value;
-              },
-              child: InteractiveViewer(
-                transformationController: controller.transformationController,
-                minScale: 1.0,
-                maxScale: 3.0,
-                constrained: true,
-                child: Center(
-                  child: AspectRatio(
-                    aspectRatio: videoController.value.aspectRatio,
-                    child: VideoPlayer(videoController),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-          // 底部控制栏
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: AnimatedOpacity(
-              opacity: (!controller.isPlaying || controller.showControls.value) ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 300),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-                child: _buildTikTokStyleProgressBar(),
-              ),
-            ),
-          ),
-        ],
-      );
-    });
-  }
-
-  /// 构建全屏播放器
-  Widget _buildFullScreenPlayer() {
-    return Obx(() {
-      final videoController = controller.controller.value;
-      if (videoController == null) return const SizedBox.shrink();
-
-      return Stack(
+    return SizedBox.expand(
+      child: Stack(
+        fit: StackFit.expand,
         children: [
           // 视频播放器
-          Positioned.fill(
-            child: GestureDetector(
-              onHorizontalDragStart: (details) {
-                _dragStartX = details.globalPosition.dx;
-              },
-              onHorizontalDragUpdate: (details) {
-                _currentDragX = details.globalPosition.dx;
-              },
-              onHorizontalDragEnd: (details) {
-                final dragDistance = _currentDragX - _dragStartX;
-                final scale = controller.transformationController.value.getMaxScaleOnAxis();
-                if (dragDistance.abs() > _dragThreshold && scale == 1.0) {
-                  if (dragDistance > 0 && controller.canGoPrevious) {
-                    controller.pageController.previousPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
-                  } else if (dragDistance < 0 && controller.canGoNext) {
-                    controller.pageController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    );
+          GestureDetector(
+            onDoubleTap: isCurrentPage ? controller.togglePlayPause : null,
+            onTap: isCurrentPage
+                ? () {
+                    controller.showControls.value = !controller.showControls.value;
                   }
-                }
-              },
-              onDoubleTap: controller.togglePlayPause,
-              onTap: () {
-                controller.showControls.value = !controller.showControls.value;
-              },
-              child: InteractiveViewer(
-                transformationController: controller.transformationController,
-                minScale: 1.0,
-                maxScale: 3.0,
-                constrained: true,
-                child: Center(
-                  child: AspectRatio(
-                    aspectRatio: videoController.value.aspectRatio,
-                    child: VideoPlayer(videoController),
+                : null,
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: videoController.value.aspectRatio,
+                child: SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.fitWidth,
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width,
+                      height: MediaQuery.of(context).size.width / videoController.value.aspectRatio,
+                      child: VideoPlayer(videoController),
+                    ),
                   ),
                 ),
               ),
             ),
           ),
 
-          // 顶部控制栏
-          Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
-            child: AnimatedOpacity(
-              opacity: (!controller.isPlaying || controller.showControls.value) ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 300),
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      Colors.black.withOpacity(0.7),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back, color: Colors.white),
-                      onPressed: controller.toggleFullScreen,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Text(
-                        controller.videoTitle,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    // 页码指示
-                    if (controller.videos.length > 1)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          '${controller.currentIndex.value + 1}/${controller.videos.length}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.fullscreen_exit, color: Colors.white),
-                      onPressed: controller.toggleFullScreen,
-                      style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.2),
-                      ),
-                    ),
-                  ],
+          // 底部控制栏（只显示在当前页面）
+          if (isCurrentPage)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: AnimatedOpacity(
+                opacity: (!controller.isPlaying || controller.showControls.value) ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                  child: _buildTikTokStyleProgressBar(),
                 ),
               ),
             ),
-          ),
-
-          // 底部控制栏
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: AnimatedOpacity(
-              opacity: (!controller.isPlaying || controller.showControls.value) ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 300),
-              child: Container(
-                padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
-                child: _buildTikTokStyleProgressBar(),
-              ),
-            ),
-          ),
         ],
-      );
-    });
+      ),
+    );
   }
 
   /// 构建 AppBar
@@ -409,17 +213,6 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
               ),
             const SizedBox(width: 8),
             IconButton(
-              icon: Icon(
-                controller.isFullScreen.value ? Icons.fullscreen_exit : Icons.fullscreen,
-                color: Colors.white,
-              ),
-              onPressed: controller.toggleFullScreen,
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.white.withOpacity(0.2),
-              ),
-            ),
-            const SizedBox(width: 8),
-            IconButton(
               icon: const Icon(Icons.share, color: Colors.white),
               onPressed: () => _shareVideo(),
               style: IconButton.styleFrom(
@@ -437,55 +230,6 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
         ),
       );
     });
-  }
-
-  /// 构建错误视图
-  Widget _buildErrorView() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(
-            Icons.error_outline,
-            size: 64,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 24),
-        const Text(
-          '视频加载失败',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          '文件不存在或已被删除',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.white.withOpacity(0.7),
-          ),
-        ),
-        if (controller.videos.length > 1)
-          Padding(
-            padding: const EdgeInsets.only(top: 24),
-            child: Text(
-              '滑动查看其他视频',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.white.withOpacity(0.5),
-              ),
-            ),
-          ),
-      ],
-    );
   }
 
   /// 构建抖音风格进度条
