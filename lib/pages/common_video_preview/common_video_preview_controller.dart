@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
@@ -38,6 +39,10 @@ class CommonVideoPreviewController extends GetxController {
   final RxDouble scrubPosition = 0.0.obs;
   final RxBool wasPlayingBeforeScrubbing = false.obs;
 
+  // 进度条显示控制
+  final RxBool showProgressBar = false.obs;
+  Timer? _progressBarTimer;
+
   // 缩放控制器
   late TransformationController transformationController;
 
@@ -63,6 +68,7 @@ class CommonVideoPreviewController extends GetxController {
     _videoControllers.clear();
     transformationController.dispose();
     pageController.dispose();
+    _progressBarTimer?.cancel();
     super.onClose();
   }
 
@@ -323,4 +329,31 @@ class CommonVideoPreviewController extends GetxController {
 
   /// 是否已准备好
   bool get isControllersReady => _isControllersReady.value;
+
+  /// 显示进度条
+  void showProgressBarOverlay() {
+    showProgressBar.value = true;
+    _startProgressBarTimer();
+  }
+
+  /// 启动进度条自动隐藏计时器
+  void _startProgressBarTimer() {
+    _progressBarTimer?.cancel();
+    _progressBarTimer = Timer(const Duration(seconds: 3), () {
+      showProgressBar.value = false;
+    });
+  }
+
+  /// 手动隐藏进度条
+  void hideProgressBar() {
+    showProgressBar.value = false;
+    _progressBarTimer?.cancel();
+  }
+
+  /// 重置进度条计时器（有新操作时调用）
+  void resetProgressBarTimer() {
+    if (showProgressBar.value) {
+      _startProgressBarTimer();
+    }
+  }
 }

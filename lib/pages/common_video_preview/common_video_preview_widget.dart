@@ -116,6 +116,12 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
             onTap: isCurrentPage
                 ? () {
                     controller.showControls.value = !controller.showControls.value;
+                    // 切换进度条显示/隐藏
+                    if (controller.showProgressBar.value) {
+                      controller.hideProgressBar();
+                    } else {
+                      controller.showProgressBarOverlay();
+                    }
                   }
                 : null,
             child: Center(
@@ -243,95 +249,111 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
       final duration = controller.totalDuration;
       final buffer = controller.bufferedPosition;
 
-      return Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Column(
-            children: [
-              // 时间预览（拖动时显示）
-              if (controller.isScrubbing.value)
-                AnimatedContainer(
-                  duration: const Duration(milliseconds: 100),
-                  curve: Curves.easeOut,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.7),
-                      borderRadius: BorderRadius.circular(8),
+      return AnimatedOpacity(
+        opacity: controller.showProgressBar.value ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        child: AnimatedSize(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          child: controller.showProgressBar.value
+              ? Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Column(
+                      children: [
+                        // 时间预览（拖动时显示）
+                        if (controller.isScrubbing.value)
+                          AnimatedContainer(
+                            duration: const Duration(milliseconds: 100),
+                            curve: Curves.easeOut,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.7),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                controller.formatDuration(Duration(milliseconds: position.toInt())),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ),
+
+                        const SizedBox(height: 8),
+
+                        // 进度条
+                        GestureDetector(
+                          onHorizontalDragStart: (details) {
+                            controller.startScrubbing(details.globalPosition);
+                            controller.showProgressBarOverlay();
+                          },
+                          onHorizontalDragUpdate: (details) {
+                            controller.updateScrubbing(details.globalPosition);
+                            controller.resetProgressBarTimer();
+                          },
+                          onHorizontalDragEnd: (details) {
+                            controller.endScrubbing();
+                            controller.showProgressBarOverlay();
+                          },
+                          onTapDown: (details) {
+                            controller.startScrubbing(details.globalPosition);
+                            controller.showProgressBarOverlay();
+                          },
+                          onTapUp: (details) {
+                            controller.endScrubbing();
+                            controller.showProgressBarOverlay();
+                          },
+                          child: Container(
+                            key: controller.progressBarKey,
+                            height: 24,
+                            width: double.infinity,
+                            color: Colors.white.withOpacity(0.1),
+                            child: CustomPaint(
+                              painter: TikTokProgressBarPainter(
+                                position: position,
+                                duration: duration,
+                                buffer: buffer,
+                                isScrubbing: controller.isScrubbing.value,
+                              ),
+                              size: Size.infinite,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      controller.formatDuration(Duration(milliseconds: position.toInt())),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    const SizedBox(height: 8),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            controller.formatDuration(Duration(milliseconds: position.toInt())),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          Text(
+                            controller.formatDuration(controller.duration),
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.7),
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ),
-                ),
-
-              const SizedBox(height: 8),
-
-              // 进度条
-              GestureDetector(
-                onHorizontalDragStart: (details) {
-                  controller.startScrubbing(details.globalPosition);
-                },
-                onHorizontalDragUpdate: (details) {
-                  controller.updateScrubbing(details.globalPosition);
-                },
-                onHorizontalDragEnd: (details) {
-                  controller.endScrubbing();
-                },
-                onTapDown: (details) {
-                  controller.startScrubbing(details.globalPosition);
-                },
-                onTapUp: (details) {
-                  controller.endScrubbing();
-                },
-                child: Container(
-                  key: controller.progressBarKey,
-                  height: 24,
-                  width: double.infinity,
-                  color: Colors.white.withOpacity(0.1),
-                  child: CustomPaint(
-                    painter: TikTokProgressBarPainter(
-                      position: position,
-                      duration: duration,
-                      buffer: buffer,
-                      isScrubbing: controller.isScrubbing.value,
-                    ),
-                    size: Size.infinite,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  controller.formatDuration(Duration(milliseconds: position.toInt())),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                Text(
-                  controller.formatDuration(controller.duration),
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
+                  ],
+                )
+              : const SizedBox.shrink(),
+        ),
       );
     });
   }
