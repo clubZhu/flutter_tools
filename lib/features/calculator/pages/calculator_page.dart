@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:calculator_app/controllers/calculator_controller.dart';
+import 'package:calculator_app/features/calculator/controllers/calculator_controller.dart';
 
 class CalculatorPage extends StatelessWidget {
   const CalculatorPage({super.key});

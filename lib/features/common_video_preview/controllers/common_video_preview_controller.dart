@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:video_player/video_player.dart';
-import '../../../features/video_download/models/downloaded_video_model.dart';
-import '../../../models/video_recording_model.dart';
+import 'package:calculator_app/features/video_download/models/downloaded_video_model.dart';
+import 'package:calculator_app/features/video_recording/models/video_recording_model.dart';
 
 /// iOS 相册风格视频预览控制器
 class CommonVideoPreviewController extends GetxController {

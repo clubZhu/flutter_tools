@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:calculator_app/controllers/chat_controller.dart';
-import 'package:calculator_app/models/chat_message.dart';
+import 'package:calculator_app/features/chat/controllers/chat_controller.dart';
+import 'package:calculator_app/features/chat/models/chat_message.dart';
 
 class ChatPage extends StatelessWidget {
   const ChatPage({super.key});

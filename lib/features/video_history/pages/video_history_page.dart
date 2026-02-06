@@ -1,8 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../controllers/video_recording_controller.dart';
-import '../models/video_recording_model.dart';
+import 'package:calculator_app/features/video_recording/controllers/video_recording_controller.dart';
+import 'package:calculator_app/features/video_recording/models/video_recording_model.dart';
 import 'package:calculator_app/widgets/app_background.dart';
 
 /// 视频历史列表页面

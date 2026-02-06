@@ -2,21 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:calculator_app/routes/app_routes.dart';
 import 'package:calculator_app/routes/custom_transitions.dart';
-import 'package:calculator_app/pages/splash_page.dart';
-import 'package:calculator_app/pages/home_page.dart';
-import 'package:calculator_app/pages/calculator_page.dart';
-import 'package:calculator_app/pages/chat_page.dart';
-import 'package:calculator_app/pages/item_list_page.dart';
-import 'package:calculator_app/pages/html_test_page.dart';
-import 'package:calculator_app/pages/settings_page.dart';
-import 'package:calculator_app/pages/video_download_page.dart';
+import 'package:calculator_app/features/splash/pages/splash_page.dart';
+import 'package:calculator_app/features/home/pages/home_page.dart';
+import 'package:calculator_app/features/calculator/pages/calculator_page.dart';
+import 'package:calculator_app/features/chat/pages/chat_page.dart';
+import 'package:calculator_app/features/html_test/pages/html_test_page.dart';
+import 'package:calculator_app/features/settings/pages/settings_page.dart';
+import 'package:calculator_app/features/video_download/pages/video_download_page.dart';
 import 'package:calculator_app/features/video_download/pages/video_downloaded_page.dart';
 import 'package:calculator_app/features/video_download/controllers/video_downloaded_controller.dart';
-import 'package:calculator_app/pages/web_service_page.dart';
-import 'package:calculator_app/pages/video_recording_page.dart';
-import 'package:calculator_app/pages/common_video_preview_page.dart';
-import 'package:calculator_app/pages/video_history_page.dart';
-import 'package:calculator_app/controllers/video_recording_controller.dart';
+import 'package:calculator_app/features/web_service/pages/web_service_page.dart';
+import 'package:calculator_app/features/video_recording/pages/video_recording_page.dart';
+import 'package:calculator_app/features/common_video_preview/pages/common_video_preview_page.dart';
+import 'package:calculator_app/features/video_history/pages/video_history_page.dart';
+import 'package:calculator_app/features/video_recording/controllers/video_recording_controller.dart';
 
 /// 路由页面配置
 class AppPages {
@@ -57,14 +56,6 @@ class AppPages {
       duration: const Duration(milliseconds: 350),
     ),
 
-    // 列表页面 - 从右侧滑入
-    CustomTransitions.customSlideFade(
-      page: GetPage(
-        name: AppRoutes.ITEM_LIST,
-        page: () => const ItemListPage(),
-      ),
-      duration: const Duration(milliseconds: 300),
-    ),
 
     // HTML测试 - 淡入缩放
     CustomTransitions.customFadeZoom(

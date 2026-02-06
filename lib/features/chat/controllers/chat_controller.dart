@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:calculator_app/models/chat_message.dart';
+import 'package:calculator_app/features/chat/models/chat_message.dart';
 
 class ChatController extends GetxController {
   // Reactive state

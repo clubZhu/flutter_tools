@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:calculator_app/services/biometric_service.dart';
+import 'package:calculator_app/features/settings/services/biometric_service.dart';
 import 'package:calculator_app/widgets/app_background.dart';
 
 /// 设置页面

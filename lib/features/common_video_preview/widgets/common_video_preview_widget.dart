@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import 'package:get/get.dart';
-import '../../../controllers/video_recording_controller.dart';
+import 'package:calculator_app/features/video_recording/controllers/video_recording_controller.dart';
 import 'package:calculator_app/widgets/app_background.dart';
 import 'tiktok_progress_bar_painter.dart';
-import 'common_video_preview_controller.dart';
+import '../controllers/common_video_preview_controller.dart';
 
 class CommonVideoPreviewWidget extends StatefulWidget {
   final Widget? child;

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:get/get.dart';
-import '../controllers/video_recording_controller.dart';
+import 'package:calculator_app/features/video_recording/controllers/video_recording_controller.dart';
 
 /// 视频录制页面
 class VideoRecordingPage extends StatefulWidget {

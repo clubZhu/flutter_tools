@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:calculator_app/services/web_service_server.dart';
+import 'package:calculator_app/features/web_service/services/web_service_server.dart';
 import 'package:calculator_app/widgets/app_background.dart';
 
 /// WebService文件传输页面

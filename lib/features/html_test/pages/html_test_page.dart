@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_widget_from_html_core/flutter_widget_from_html_core.dart';
-import 'package:calculator_app/utils/html_widget_factory.dart';
+import 'package:calculator_app/features/html_test/utils/html_widget_factory.dart';
 
 /// HTML Widget 测试页面
 class HtmlTestPage extends StatefulWidget {

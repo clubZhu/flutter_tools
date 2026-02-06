@@ -8,6 +8,7 @@ class VideoInfo {
   final String author;
   final String? platform;
   final int? duration;
+  final List<ImageInfo> images; // 图片列表
 
   VideoInfo({
     required this.id,
@@ -18,10 +19,19 @@ class VideoInfo {
     required this.author,
     this.platform,
     this.duration,
+    this.images = const [],
   });
 
   /// 从 JSON 创建
   factory VideoInfo.fromJson(Map<String, dynamic> json) {
+    // 解析图片列表
+    final List<dynamic> imagesData = json['images'] ?? [];
+    final List<ImageInfo> images = imagesData.map((img) {
+      return ImageInfo(
+        url: img['url'] ?? img['cover_url'] ?? img['cover'] ?? '',
+      );
+    }).toList();
+
     return VideoInfo(
       id: json['id'] ?? '',
       title: json['title'] ?? json['desc'] ?? '无标题',
@@ -31,6 +41,7 @@ class VideoInfo {
       author: json['author'] ?? json['authorName'] ?? '未知作者',
       platform: json['platform'],
       duration: json['duration'] ?? json['durationMs'],
+      images: images,
     );
   }
 
@@ -45,11 +56,38 @@ class VideoInfo {
       'author': author,
       'platform': platform,
       'duration': duration,
+      'images': images.map((img) => img.toJson()).toList(),
     };
   }
 
   @override
   String toString() {
-    return 'VideoInfo{id: $id, title: $title, author: $author, platform: $platform}';
+    return 'VideoInfo{id: $id, title: $title, author: $author, platform: $platform, images: ${images.length}}';
   }
+}
+
+/// 图片信息模型
+class ImageInfo {
+  final String url;
+
+  ImageInfo({
+    required this.url,
+  });
+
+  /// 从 JSON 创建
+  factory ImageInfo.fromJson(Map<String, dynamic> json) {
+    return ImageInfo(
+      url: json['url'] ?? json['cover_url'] ?? json['cover'] ?? '',
+    );
+  }
+
+  /// 转换为 JSON
+  Map<String, dynamic> toJson() {
+    return {
+      'url': url,
+    };
+  }
+
+  @override
+  String toString() => 'ImageInfo{url: $url}';
 }
