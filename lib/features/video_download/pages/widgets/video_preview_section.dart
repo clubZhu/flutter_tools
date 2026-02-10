@@ -325,17 +325,18 @@ class _VideoPlayerWidget extends StatelessWidget {
               ),
             ),
             // 暂停时显示播放图标
-            if (!videoController.value.isPlaying)
-              Container(
-                color: Colors.black.withOpacity(0.3),
-                child: const Center(
-                  child: Icon(
-                    Icons.play_arrow,
-                    color: Colors.white,
-                    size: 64,
-                  ),
-                ),
-              ),
+            Obx(() => !controller.isVideoPlaying.value
+                ? Container(
+                    color: Colors.black.withOpacity(0.3),
+                    child: const Center(
+                      child: Icon(
+                        Icons.play_arrow,
+                        color: Colors.white,
+                        size: 64,
+                      ),
+                    ),
+                  )
+                : const SizedBox.shrink()),
           ],
         ),
       );

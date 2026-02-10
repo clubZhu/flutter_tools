@@ -35,6 +35,8 @@ class VideoDownloadController extends GetxController
   // 响应式状态
   final Rx<VideoInfo?> videoInfo = Rx<VideoInfo?>(null);
   final Rx<VideoPlayerController?> videoController = Rx<VideoPlayerController?>(null);
+  final RxBool isVideoPlaying = false.obs;
+  VoidCallback? _videoPlayerListener;
   final RxBool isParsing = false.obs;
   final RxBool isDownloading = false.obs;
   final RxDouble downloadProgress = 0.0.obs;
@@ -90,6 +92,9 @@ class VideoDownloadController extends GetxController
     urlController.dispose();
     scrollController.dispose();
     urlFocusNode.dispose();
+    if (_videoPlayerListener != null) {
+      videoController.value?.removeListener(_videoPlayerListener!);
+    }
     videoController.value?.dispose();
     fadeController.dispose();
     scaleController.dispose();
@@ -176,7 +181,20 @@ class VideoDownloadController extends GetxController
     try {
       final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
       await controller.initialize();
+
+      // 移除旧的监听器
+      if (_videoPlayerListener != null) {
+        videoController.value?.removeListener(_videoPlayerListener!);
+      }
+
+      // 添加监听器更新播放状态
+      _videoPlayerListener = () {
+        isVideoPlaying.value = controller.value.isPlaying;
+      };
+      controller.addListener(_videoPlayerListener!);
+
       videoController.value = controller;
+      isVideoPlaying.value = false;
     } catch (e) {
       print('初始化视频播放器失败: $e');
     }
@@ -383,7 +401,6 @@ class VideoDownloadController extends GetxController
     } else {
       controller.play();
     }
-    update();
   }
 
   /// 清空URL输入框

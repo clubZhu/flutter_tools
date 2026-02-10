@@ -42,14 +42,29 @@ class DownloadSection extends StatelessWidget {
         );
       }
 
-      // 默认下载按钮（如果有图片显示两个按钮）
-      final hasImages = controller.videoInfo.value?.images.isNotEmpty ?? false;
-      return hasImages
-          ? _DownloadButtons(
-              onDownloadVideo: controller.downloadVideo,
-              onDownloadImages: controller.downloadImages,
-            )
-          : _DownloadButton(onDownload: controller.downloadVideo);
+      // 默认下载按钮（根据内容类型显示对应按钮）
+      final videoInfo = controller.videoInfo.value;
+      final isImagePost = videoInfo != null &&
+          videoInfo.images.isNotEmpty &&
+          (videoInfo.videoUrl.isEmpty || !videoInfo.videoUrl.startsWith('http'));
+
+      if (isImagePost) {
+        // 图文内容，只显示图片下载按钮
+        return _DownloadButton(
+          onDownload: controller.downloadImages,
+          label: '下载图片',
+          icon: Icons.photo_library_rounded,
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xFF9C27B0),
+              Color(0xFFE91E63),
+            ],
+          ),
+        );
+      } else {
+        // 视频内容，只显示视频下载按钮
+        return _DownloadButton(onDownload: controller.downloadVideo);
+      }
     });
   }
 }
