@@ -112,8 +112,8 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
         children: [
           // 视频播放器
           GestureDetector(
-            onDoubleTap: isCurrentPage ? controller.togglePlayPause : null,
-            onTap: isCurrentPage
+            onTap: isCurrentPage ? controller.togglePlayPause : null,
+            onDoubleTap: isCurrentPage
                 ? () {
                     controller.showControls.value = !controller.showControls.value;
                     // 切换进度条显示/隐藏
@@ -140,6 +140,38 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
               ),
             ),
           ),
+
+          // 播放/暂停按钮（居中显示）
+          if (isCurrentPage)
+            Positioned.fill(
+              child: ValueListenableBuilder(
+                valueListenable: videoController,
+                builder: (context, value, child) {
+                  return AnimatedOpacity(
+                    opacity: !value.isPlaying ? 1.0 : 0.0,
+                    duration: const Duration(milliseconds: 200),
+                    child: GestureDetector(
+                      onTap: controller.togglePlayPause,
+                      child: Center(
+                        child: Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.6),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow,
+                            color: Colors.white,
+                            size: 32,
+                          ),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
 
           // 底部控制栏（只显示在当前页面）
           if (isCurrentPage)

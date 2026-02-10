@@ -87,6 +87,7 @@ class ImagePreviewPageState extends State<ImagePreviewPage> {
             // 图片预览区域
             Expanded(
               child: PageView.builder(
+                physics: const ClampingScrollPhysics(),
                 controller: _pageController,
                 onPageChanged: (index) {
                   setState(() {
