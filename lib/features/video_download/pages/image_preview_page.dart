@@ -94,9 +94,9 @@ class ImagePreviewPageState extends State<ImagePreviewPage> {
                     _currentIndex = index;
                   });
                 },
-                itemCount: widget.images.length,
+                itemCount: widget.images.value.length,
                 itemBuilder: (context, index) {
-                  final image = widget.images[index];
+                  final image = widget.images.value[index];
                   return ImageViewer(image: image);
                 },
               ),
@@ -116,37 +116,37 @@ class ImageViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: InteractiveViewer(
-        minScale: 0.5,
-        maxScale: 4.0,
-        child: Image.file(
-          File(image.localPath),
-          fit: BoxFit.contain,
-          errorBuilder: (context, error, stackTrace) {
-            return Container(
-              color: Colors.grey.shade900,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.broken_image_rounded,
-                    size: 80,
-                    color: Colors.grey.shade700,
+    return InteractiveViewer(
+      minScale: 0.5,
+      maxScale: 4.0,
+      panEnabled: false,
+      scaleEnabled: true,
+      child: Image.file(
+        File(image.localPath),
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            color: Colors.grey.shade900,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.broken_image_rounded,
+                  size: 80,
+                  color: Colors.grey.shade700,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  '无法加载图片',
+                  style: TextStyle(
+                    color: Colors.grey.shade500,
+                    fontSize: 16,
                   ),
-                  const SizedBox(height: 16),
-                  Text(
-                    '无法加载图片',
-                    style: TextStyle(
-                      color: Colors.grey.shade500,
-                      fontSize: 16,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          },
-        ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
