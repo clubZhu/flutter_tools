@@ -3,6 +3,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/downloaded_video_model.dart';
+import '../models/downloaded_image_model.dart';
 import '../../../services/video_thumbnail_service.dart';
 
 /// 视频下载历史服务
@@ -15,12 +16,18 @@ class DownloadHistoryService {
   factory DownloadHistoryService() => _instance;
 
   static const String _metadataKey = 'video_metadata';
+  static const String _imageMetadataKey = 'image_metadata';
   final List<DownloadedVideoModel> _videos = [];
+  final List<DownloadedImageModel> _images = [];
   Directory? _downloadDirectory;
+  Directory? _imageDirectory;
   final VideoThumbnailService _thumbnailService = VideoThumbnailService();
 
   /// 获取所有已下载视频
   List<DownloadedVideoModel> get videos => List.unmodifiable(_videos);
+
+  /// 获取所有已下载图片
+  List<DownloadedImageModel> get images => List.unmodifiable(_images);
 
   /// 是否为空
   bool get isEmpty => _videos.isEmpty;
@@ -31,7 +38,9 @@ class DownloadHistoryService {
   /// 初始化服务
   Future<void> init() async {
     await _getDownloadDirectory();
+    await _getImageDirectory();
     await _scanDownloadDirectory();
+    await _scanImageDirectory();
   }
 
   /// 获取下载目录
@@ -52,6 +61,26 @@ class DownloadHistoryService {
     }
 
     print('下载目录: ${_downloadDirectory?.path}');
+  }
+
+  /// 获取图片下载目录
+  Future<void> _getImageDirectory() async {
+    if (Platform.isAndroid) {
+      final directory = await getExternalStorageDirectory();
+      if (directory != null) {
+        _imageDirectory = Directory('${directory.path}/Pictures/抖音图片');
+      }
+    } else if (Platform.isIOS) {
+      final directory = await getApplicationDocumentsDirectory();
+      _imageDirectory = Directory('${directory.path}/Pictures/抖音图片');
+    }
+
+    // 确保目录存在
+    if (_imageDirectory != null && !await _imageDirectory!.exists()) {
+      await _imageDirectory!.create(recursive: true);
+    }
+
+    print('图片目录: ${_imageDirectory?.path}');
   }
 
   /// 扫描下载目录中的视频文件
@@ -166,6 +195,143 @@ class DownloadHistoryService {
   /// 刷新视频列表
   Future<void> refresh() async {
     await _scanDownloadDirectory();
+    await _scanImageDirectory();
+  }
+
+  /// 扫描图片目录中的图片文件
+  Future<void> _scanImageDirectory() async {
+    if (_imageDirectory == null) {
+      print('图片目录未初始化');
+      return;
+    }
+
+    _images.clear();
+
+    try {
+      final files = await _imageDirectory!.list().toList();
+      final metadataMap = await _loadImageMetadata();
+
+      for (var file in files) {
+        if (file is File && _isImageFile(file)) {
+          try {
+            final stat = await file.stat();
+            final fileName = file.path.split('/').last;
+
+            // 从元数据中获取额外信息
+            final metadata = metadataMap[fileName];
+            final imageUrl = metadata?['imageUrl'] ?? '';
+
+            final image = DownloadedImageModel(
+              id: fileName,
+              videoId: metadata?['videoId'] ?? '',
+              videoTitle: metadata?['videoTitle'] ?? _extractTitleFromFileName(fileName),
+              videoAuthor: metadata?['videoAuthor'] ?? '未知',
+              platform: metadata?['platform'] ?? _guessPlatform(fileName),
+              imageUrl: imageUrl,
+              localPath: file.path,
+              downloadedAt: stat.modified,
+              fileSize: stat.size,
+            );
+
+            _images.add(image);
+          } catch (e) {
+            print('处理图片文件失败: ${file.path}, 错误: $e');
+          }
+        }
+      }
+
+      // 按修改时间排序（最新的在前）
+      _images.sort((a, b) => b.downloadedAt.compareTo(a.downloadedAt));
+
+      print('扫描完成，找到 ${_images.length} 个图片文件');
+    } catch (e) {
+      print('扫描图片目录失败: $e');
+    }
+  }
+
+  /// 判断是否为图片文件
+  bool _isImageFile(File file) {
+    final path = file.path.toLowerCase();
+    return path.endsWith('.jpg') ||
+        path.endsWith('.jpeg') ||
+        path.endsWith('.png') ||
+        path.endsWith('.webp') ||
+        path.endsWith('.gif') ||
+        path.endsWith('.bmp');
+  }
+
+  /// 添加图片元数据（下载成功后调用）
+  Future<void> addImage(DownloadedImageModel image) async {
+    await _saveImageMetadata(image);
+    await _scanImageDirectory();
+  }
+
+  /// 保存图片元数据
+  Future<void> _saveImageMetadata(DownloadedImageModel image) async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final metadataMap = await _loadImageMetadata();
+
+      final fileName = image.localPath.split('/').last;
+      metadataMap[fileName] = {
+        'videoId': image.videoId,
+        'videoTitle': image.videoTitle,
+        'videoAuthor': image.videoAuthor,
+        'platform': image.platform,
+        'imageUrl': image.imageUrl,
+      };
+
+      final json = jsonEncode(metadataMap);
+      await prefs.setString(_imageMetadataKey, json);
+      print('已保存图片元数据: $fileName');
+    } catch (e) {
+      print('保存图片元数据失败: $e');
+    }
+  }
+
+  /// 加载所有图片元数据
+  Future<Map<String, dynamic>> _loadImageMetadata() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final json = prefs.getString(_imageMetadataKey);
+      if (json != null) {
+        final Map<String, dynamic> data = jsonDecode(json);
+        return data.cast<String, dynamic>();
+      }
+    } catch (e) {
+      print('加载图片元数据失败: $e');
+    }
+    return {};
+  }
+
+  /// 删除图片（实际删除文件）
+  Future<void> deleteImage(String id) async {
+    try {
+      final image = _images.firstWhere((img) => img.id == id);
+      final file = File(image.localPath);
+
+      if (await file.exists()) {
+        await file.delete();
+        print('已删除图片: ${image.localPath}');
+      }
+
+      // 重新扫描目录
+      await _scanImageDirectory();
+    } catch (e) {
+      print('删除图片失败: $e');
+      rethrow;
+    }
+  }
+
+  /// 搜索图片
+  List<DownloadedImageModel> searchImages(String keyword) {
+    if (keyword.isEmpty) return List.from(_images);
+
+    final lowerKeyword = keyword.toLowerCase();
+    return _images.where((image) {
+      return image.videoTitle.toLowerCase().contains(lowerKeyword) ||
+          image.videoAuthor.toLowerCase().contains(lowerKeyword);
+    }).toList();
   }
 
   /// 保存视频元数据（标题、作者等额外信息）

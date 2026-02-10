@@ -294,6 +294,9 @@ class TikTokParserService {
             duration = videoData['video']['duration'];
           }
 
+          // 提取图片列表
+          final List<ImageInfo> images = _extractImages(videoData);
+
           return VideoInfo(
             id: videoData['id'] ??
                 videoData['aweme_id'] ??
@@ -311,6 +314,7 @@ class TikTokParserService {
             author: author,
             platform: platform,
             duration: duration != null ? (duration * 1000).toInt() : null,
+            images: images,
           );
         } else {
           print('API返回错误: ${data['msg'] ?? data['message']}');
@@ -349,6 +353,9 @@ class TikTokParserService {
         if (data['code'] == 0 || data['success'] == true) {
           final videoData = data['data'];
 
+          // 提取图片列表
+          final List<ImageInfo> images = _extractImages(videoData);
+
           return VideoInfo(
             id: videoData['id'] ?? '',
             title: videoData['title'] ?? videoData['desc'] ?? '',
@@ -358,6 +365,7 @@ class TikTokParserService {
             author: videoData['author'] ?? videoData['authorName'] ?? '',
             platform: videoData['platform'],
             duration: videoData['duration'],
+            images: images,
           );
         }
       }
@@ -483,7 +491,11 @@ class TikTokParserService {
 
           if (videoUrl.isNotEmpty) {
             print('  ✓ $apiName 成功获取视频信息');
-            return VideoInfo(
+
+            // 提取图片列表
+          final List<ImageInfo> images = _extractImages(videoData);
+
+          return VideoInfo(
               id: videoData['id'] ??
                   videoData['aweme_id'] ??
                   videoData['video_id'] ??
@@ -500,6 +512,7 @@ class TikTokParserService {
               duration: videoData['duration'] != null
                   ? (videoData['duration'] * 1000).toInt()
                   : null,
+              images: images,
             );
           } else {
             print('  ⚠️ $apiName 返回数据中未找到视频URL');
@@ -610,6 +623,13 @@ class TikTokParserService {
 
       if (videoUrl != null && videoUrl.isNotEmpty) {
         print('  ✓ HTML爬虫成功提取视频URL');
+
+        // 尝试从HTML中提取图片（如果有）
+        final List<ImageInfo> images = [];
+        if (coverUrl != null && coverUrl.isNotEmpty) {
+          images.add(ImageInfo(url: coverUrl));
+        }
+
         return VideoInfo(
           id: videoId ?? 'douyin_${DateTime.now().millisecondsSinceEpoch}',
           title: title ?? '抖音视频',
@@ -619,6 +639,7 @@ class TikTokParserService {
           author: author ?? '未知作者',
           platform: 'douyin',
           duration: null,
+          images: images,
         );
       }
 
@@ -681,6 +702,94 @@ class TikTokParserService {
     return url.contains('tiktok.com') ||
         url.contains('douyin.com') ||
         url.contains('iesdouyin.com');
+  }
+
+  /// 从API数据中提取图片列表
+  List<ImageInfo> _extractImages(Map<String, dynamic> videoData) {
+    final List<ImageInfo> images = [];
+
+    try {
+      // 方法1: 从 images 字段直接获取
+      if (videoData['images'] != null) {
+        final imagesList = videoData['images'];
+        if (imagesList is List) {
+          for (var img in imagesList) {
+            // 处理不同类型的图片数据
+            if (img is String && img.isNotEmpty) {
+              // 字符串类型的URL
+              images.add(ImageInfo(url: img));
+            } else if (img is Map) {
+              // 对象类型的图片数据
+              final url = img['url'] ?? img['cover_url'] ?? img['cover'];
+              if (url != null && url.isNotEmpty) {
+                images.add(ImageInfo(url: url));
+              }
+            }
+          }
+        }
+      }
+
+      // 方法2: 从 music_cover 获取
+      if (images.isEmpty && videoData['music_cover'] != null) {
+        final musicCover = videoData['music_cover'];
+        if (musicCover is String && musicCover.isNotEmpty) {
+          images.add(ImageInfo(url: musicCover));
+        }
+      }
+
+      // 方法3: 从 static_cover 获取
+      if (images.isEmpty && videoData['static_cover'] != null) {
+        final staticCover = videoData['static_cover'];
+        if (staticCover is String && staticCover.isNotEmpty) {
+          images.add(ImageInfo(url: staticCover));
+        }
+      }
+
+      // 方法4: 从 dynamic_cover 获取
+      if (images.isEmpty && videoData['dynamic_cover'] != null) {
+        final dynamicCover = videoData['dynamic_cover'];
+        if (dynamicCover is Map && dynamicCover['url_list'] != null) {
+          final urlList = dynamicCover['url_list'];
+          if (urlList is List) {
+            for (var item in urlList) {
+              if (item is String && item.isNotEmpty) {
+                images.add(ImageInfo(url: item));
+              }
+            }
+          }
+        }
+      }
+
+      // 方法5: 从 avatar 获取作者头像
+      if (videoData['author'] != null) {
+        final author = videoData['author'];
+        if (author is Map && author['avatar_thumb'] != null) {
+          images.add(ImageInfo(url: author['avatar_thumb']));
+        }
+      }
+
+      // 方法6: 从 avatar 字段直接获取
+      if (images.isEmpty && videoData['avatar'] != null) {
+        final avatar = videoData['avatar'];
+        if (avatar is String && avatar.isNotEmpty) {
+          images.add(ImageInfo(url: avatar));
+        }
+      }
+
+      // 方法7: 从 cover 获取封面
+      if (images.isEmpty && videoData['cover'] != null) {
+        final cover = videoData['cover'];
+        if (cover is String && cover.isNotEmpty) {
+          images.add(ImageInfo(url: cover));
+        }
+      }
+
+      print('📸 提取到 ${images.length} 张图片');
+    } catch (e) {
+      print('⚠️ 提取图片失败: $e');
+    }
+
+    return images;
   }
 
   /// 获取API使用情况（TikWM）
@@ -940,6 +1049,9 @@ class TikTokParserService {
               authorData['nickname'] ??
               '未知作者';
 
+          // 提取图片列表
+          final List<ImageInfo> images = _extractImages(videoData);
+
           return VideoInfo(
             id: videoData['id'] ??
                 videoData['aweme_id'] ??
@@ -961,6 +1073,7 @@ class TikTokParserService {
             duration: videoData['duration'] != null
                 ? (videoData['duration'] * 1000).toInt()
                 : null,
+            images: images,
           );
         } else {
           print('❌ API返回错误: code=${data['code']}, msg=${data['msg']}');

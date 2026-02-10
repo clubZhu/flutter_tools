@@ -147,8 +147,13 @@ class VideoDownloadController extends GetxController
           scrollToPreview();
         });
 
-        // 初始化视频播放器
-        await initVideoPlayer(info.videoUrl);
+        // 判断是图文还是视频，只有视频才初始化播放器
+        final isImagePost = info.images.isNotEmpty &&
+            (info.videoUrl.isEmpty || !info.videoUrl.startsWith('http'));
+
+        if (!isImagePost && info.videoUrl.isNotEmpty) {
+          await initVideoPlayer(info.videoUrl);
+        }
       } else {
         isParsing.value = false;
         errorMessage.value = '解析失败，请检查链接是否正确';
@@ -311,7 +316,7 @@ class VideoDownloadController extends GetxController
       );
 
       if (files.isNotEmpty) {
-        // 将下载的文件转换为模型
+        // 将下载的文件转换为模型并保存到历史服务
         for (int i = 0; i < files.length; i++) {
           final file = files[i];
           final fileSize = await file.length();
@@ -325,6 +330,8 @@ class VideoDownloadController extends GetxController
             fileSize: fileSize,
           );
           downloadedImages.add(imageModel);
+          // 保存到历史服务
+          await _historyService.addImage(imageModel);
         }
 
         isDownloadingImages.value = false;

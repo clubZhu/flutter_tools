@@ -10,6 +10,7 @@ import 'package:calculator_app/features/video_download/pages/widgets/error_messa
 import 'package:calculator_app/features/video_download/pages/widgets/video_info_section.dart';
 import 'package:calculator_app/features/video_download/pages/widgets/video_preview_section.dart';
 import 'package:calculator_app/features/video_download/pages/widgets/download_section.dart';
+import 'package:calculator_app/features/video_download/pages/widgets/downloaded_images_section.dart';
 
 /// 视频下载页面
 class VideoDownloadPage extends StatelessWidget {
@@ -68,6 +69,7 @@ class VideoDownloadPage extends StatelessWidget {
                                         VideoPreviewSection(),
                                         SizedBox(height: 24),
                                         DownloadSection(),
+                                        DownloadedImagesSection(),
                                       ],
                                     ),
                                   ),

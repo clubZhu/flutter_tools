@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:calculator_app/widgets/app_background.dart';
 import '../../controllers/video_download_controller.dart';
 
 /// 下载区域组件

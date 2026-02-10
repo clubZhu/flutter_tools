@@ -111,8 +111,6 @@ class _VideoCardState extends State<VideoCard>
             right: 8,
             child: Row(
               children: [
-                // 平台标签
-                PlatformChip(name: widget.video.platformName),
                 const Spacer(),
                 // 更多菜单
                 MoreMenuButton(

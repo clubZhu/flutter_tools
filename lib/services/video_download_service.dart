@@ -93,6 +93,7 @@ class VideoDownloadService {
         author: '作者',
         platform: platform,
         duration: 30000,
+        images: const [],
       );
     } catch (e) {
       print('解析视频链接失败: $e');
@@ -251,6 +252,186 @@ class VideoDownloadService {
       print('获取保存目录失败: $e');
       return null;
     }
+  }
+
+  /// 获取图片保存目录
+  Future<Directory?> _getImageSaveDirectory() async {
+    try {
+      if (Platform.isAndroid) {
+        // Android 10+ 使用应用专用目录
+        final directory = await getExternalStorageDirectory();
+        if (directory != null) {
+          final picturesDir = Directory('${directory.path}/Pictures/抖音图片');
+          if (!await picturesDir.exists()) {
+            await picturesDir.create(recursive: true);
+          }
+          return picturesDir;
+        }
+      } else if (Platform.isIOS) {
+        // iOS 使用应用文档目录
+        final directory = await getApplicationDocumentsDirectory();
+        final imageDir = Directory('${directory.path}/Pictures/抖音图片');
+        if (!await imageDir.exists()) {
+          await imageDir.create(recursive: true);
+        }
+        return imageDir;
+      }
+
+      // 降级方案：使用临时目录
+      final tempDir = await getTemporaryDirectory();
+      final imageDir = Directory('${tempDir.path}/Pictures/抖音图片');
+      if (!await imageDir.exists()) {
+        await imageDir.create(recursive: true);
+      }
+      return imageDir;
+    } catch (e) {
+      print('获取图片保存目录失败: $e');
+      return null;
+    }
+  }
+
+  /// 下载图片
+  Future<File?> downloadImage(
+    String imageUrl,
+    String fileName, {
+    ProgressCallback? onProgress,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      // 检查URL
+      if (imageUrl.isEmpty) {
+        throw Exception('图片URL为空');
+      }
+
+      // 请求权限
+      final hasPermission = await requestStoragePermission();
+      if (!hasPermission) {
+        throw Exception('没有存储权限，请在设置中允许访问存储');
+      }
+
+      // 获取保存目录
+      final directory = await _getImageSaveDirectory();
+      if (directory == null) {
+        throw Exception('无法获取保存目录');
+      }
+
+      // 确保目录存在
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+
+      final savePath = '${directory.path}/$fileName';
+
+      print('开始下载图片: $imageUrl');
+      print('保存到: $savePath');
+
+      // 下载文件
+      await _dio.download(
+        imageUrl,
+        savePath,
+        onReceiveProgress: onProgress,
+        cancelToken: cancelToken,
+        options: Options(
+          receiveTimeout: const Duration(minutes: 5),
+          sendTimeout: const Duration(minutes: 5),
+        ),
+      );
+
+      // 验证文件是否下载成功
+      final file = File(savePath);
+      if (await file.exists()) {
+        final fileSize = await file.length();
+        print('图片下载完成，文件大小: ${(fileSize / 1024).toStringAsFixed(2)} KB');
+        return file;
+      } else {
+        throw Exception('图片下载失败，未找到保存的文件');
+      }
+    } catch (e) {
+      print('下载图片失败: $e');
+      return null;
+    }
+  }
+
+  /// 生成图片文件名
+  String generateImageFileName(String videoTitle, int index, String url) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final extension = _getImageExtension(url);
+    // 移除半角和全角的非法字符
+    String safeTitle = videoTitle
+        .replaceAll(RegExp(r'[<>:"/\\|?*]'), '')  // 半角非法字符
+        .replaceAll('（', '')
+        .replaceAll('）', '')
+        .replaceAll('！', '')
+        .replaceAll('？', '')
+        .replaceAll('：', '')
+        .replaceAll('"', '')
+        .replaceAll('"', '')
+        .replaceAll("'", '')
+        .replaceAll("'", '')
+        .replaceAll('\n', '')
+        .replaceAll('\r', '')
+        .replaceAll('\t', '')
+        .trim();
+    // 限制长度并确保不为空
+    if (safeTitle.isEmpty) {
+      safeTitle = 'image';
+    } else if (safeTitle.length > 30) {
+      safeTitle = safeTitle.substring(0, 30);
+    }
+    return '${safeTitle}_$timestamp$index$extension';
+  }
+
+  /// 从URL获取图片扩展名
+  String _getImageExtension(String url) {
+    if (url.contains('.png')) return '.png';
+    if (url.contains('.jpg') || url.contains('.jpeg')) return '.jpg';
+    if (url.contains('.webp')) return '.webp';
+    return '.jpg'; // 默认使用jpg
+  }
+
+  /// 批量下载图片
+  Future<List<File>> downloadImages(
+    List<String> imageUrls,
+    String videoTitle, {
+    ProgressCallback? onProgress,
+    CancelToken? cancelToken,
+    Function(int current, int total)? onImageDownloaded,
+  }) async {
+    final List<File> downloadedFiles = [];
+
+    for (int i = 0; i < imageUrls.length; i++) {
+      if (cancelToken?.isCancelled == true) {
+        break;
+      }
+
+      try {
+        final fileName = generateImageFileName(videoTitle, i, imageUrls[i]);
+        final file = await downloadImage(
+          imageUrls[i],
+          fileName,
+          onProgress: (received, total) {
+            if (onProgress != null && total > 0) {
+              // 计算当前图片的进度（0到1之间）
+              final currentProgress = received / total;
+              // 计算整体进度（已完成图片 + 当前图片进度）
+              final totalProgress = (i + currentProgress) / imageUrls.length;
+              // 转换为字节数
+              onProgress((totalProgress * total).toInt(), total);
+            }
+          },
+          cancelToken: cancelToken,
+        );
+
+        if (file != null) {
+          downloadedFiles.add(file);
+          onImageDownloaded?.call(i + 1, imageUrls.length);
+        }
+      } catch (e) {
+        print('下载图片 ${i + 1} 失败: $e');
+      }
+    }
+
+    return downloadedFiles;
   }
 
   /// 生成安全的文件名
