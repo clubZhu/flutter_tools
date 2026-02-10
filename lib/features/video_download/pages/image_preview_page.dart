@@ -1,8 +1,26 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter/physics.dart';
 import 'package:get/get.dart';
 import '../models/downloaded_image_model.dart';
 import 'package:calculator_app/widgets/app_background.dart';
+
+/// 自定义 ScrollPhysics - 降低水平滑动敏感度，提高缩放手势优先级
+class _ImagePreviewScrollPhysics extends ScrollPhysics {
+  const _ImagePreviewScrollPhysics({super.parent});
+
+  @override
+  _ImagePreviewScrollPhysics applyTo(ScrollPhysics? ancestor) {
+    return _ImagePreviewScrollPhysics(parent: buildParent(ancestor));
+  }
+
+  @override
+  SpringDescription get spring => const SpringDescription(
+        mass: 50,
+        stiffness: 100,
+        damping: 1,
+      );
+}
 
 /// 图片预览页面
 class ImagePreviewPage extends StatefulWidget {
@@ -87,7 +105,7 @@ class ImagePreviewPageState extends State<ImagePreviewPage> {
             // 图片预览区域
             Expanded(
               child: PageView.builder(
-                physics: const ClampingScrollPhysics(),
+                physics: const _ImagePreviewScrollPhysics(),
                 controller: _pageController,
                 onPageChanged: (index) {
                   setState(() {
@@ -109,44 +127,65 @@ class ImagePreviewPageState extends State<ImagePreviewPage> {
 }
 
 /// 图片查看器
-class ImageViewer extends StatelessWidget {
+class ImageViewer extends StatefulWidget {
   final DownloadedImageModel image;
 
   const ImageViewer({super.key, required this.image});
 
   @override
+  State<ImageViewer> createState() => _ImageViewerState();
+}
+
+class _ImageViewerState extends State<ImageViewer> {
+  final TransformationController _transformationController = TransformationController();
+
+  @override
+  void dispose() {
+    _transformationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return InteractiveViewer(
-      minScale: 0.5,
-      maxScale: 4.0,
-      panEnabled: false,
-      scaleEnabled: true,
-      child: Image.file(
-        File(image.localPath),
-        fit: BoxFit.contain,
-        errorBuilder: (context, error, stackTrace) {
-          return Container(
-            color: Colors.grey.shade900,
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.broken_image_rounded,
-                  size: 80,
-                  color: Colors.grey.shade700,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  '无法加载图片',
-                  style: TextStyle(
-                    color: Colors.grey.shade500,
-                    fontSize: 16,
+    return SizedBox.expand(
+      child: InteractiveViewer(
+        transformationController: _transformationController,
+        minScale: 0.5,
+        maxScale: 4.0,
+        panEnabled: true,
+        scaleEnabled: true,
+        constrained: true,
+        child: Center(
+          child: Image.file(
+            File(widget.image.localPath),
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: Colors.grey.shade900,
+                child: const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.broken_image_rounded,
+                        size: 80,
+                        color: Colors.grey,
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        '无法加载图片',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ],
-            ),
-          );
-        },
+              );
+            },
+          ),
+        ),
       ),
     );
   }
