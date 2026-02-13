@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:video_player/video_player.dart';
 import 'package:get/get.dart';
@@ -19,6 +20,7 @@ class CommonVideoPreviewWidget extends StatefulWidget {
 class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
   late final CommonVideoPreviewController controller;
   double _currentPage = 0.0;
+  bool _isFullscreen = false;
 
   @override
   void initState() {
@@ -28,7 +30,56 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
 
   @override
   void dispose() {
+    // 退出全屏模式并恢复屏幕方向
+    if (_isFullscreen) {
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+      SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    }
     super.dispose();
+  }
+
+  /// 进入横屏全屏模式
+  void _enterFullscreen() async {
+    final currentPage = controller.pageController.page?.round() ?? controller.currentIndex.value;
+    setState(() {
+      _isFullscreen = true;
+    });
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    await SystemChrome.setPreferredOrientations([
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+    // 确保跳转到当前页面
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (controller.pageController.hasClients) {
+        controller.pageController.jumpToPage(currentPage);
+      }
+    });
+  }
+
+  /// 退出全屏模式
+  void _exitFullscreen() async {
+    final currentPage = controller.pageController.page?.round() ?? controller.currentIndex.value;
+    setState(() {
+      _isFullscreen = false;
+    });
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+    await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+    // 确保跳转到当前页面
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (controller.pageController.hasClients) {
+        controller.pageController.jumpToPage(currentPage);
+      }
+    });
+  }
+
+  /// 切换全屏模式
+  void _toggleFullscreen() {
+    if (_isFullscreen) {
+      _exitFullscreen();
+    } else {
+      _enterFullscreen();
+    }
   }
 
   @override
@@ -39,6 +90,14 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
         if (widget.child != null) {
           return Scaffold(
             body: widget.child!,
+          );
+        }
+
+        // 全屏模式 - 只显示视频
+        if (_isFullscreen) {
+          return Scaffold(
+            backgroundColor: Colors.black,
+            body: _buildiOSStyleGallery(),
           );
         }
 
@@ -129,7 +188,7 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
                 aspectRatio: videoController.value.aspectRatio,
                 child: SizedBox.expand(
                   child: FittedBox(
-                    fit: BoxFit.fitWidth,
+                    fit: _isFullscreen ? BoxFit.contain : BoxFit.fitWidth,
                     child: SizedBox(
                       width: MediaQuery.of(context).size.width,
                       height: MediaQuery.of(context).size.width / videoController.value.aspectRatio,
@@ -170,6 +229,32 @@ class _CommonVideoPreviewWidgetState extends State<CommonVideoPreviewWidget> {
                     ),
                   );
                 },
+              ),
+            ),
+
+          // 全屏按钮（右上角）
+          if (isCurrentPage)
+            Positioned(
+              right: 16,
+              top: 16,
+              child: AnimatedOpacity(
+                opacity: (!controller.isPlaying || controller.showControls.value) ? 1.0 : 0.0,
+                duration: const Duration(milliseconds: 300),
+                child: GestureDetector(
+                  onTap: _toggleFullscreen,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(
+                      _isFullscreen ? Icons.fullscreen_exit : Icons.fullscreen,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
               ),
             ),
 

@@ -12,11 +12,68 @@ class YouTubeParserService {
 
   final YoutubeExplode _yt = YoutubeExplode();
 
+  /// 从URL提取视频ID，支持 Shorts 和常规格式
+  static String? extractVideoId(String url) {
+    try {
+      // 处理 YouTube Shorts: youtube.com/shorts/VIDEO_ID
+      if (url.contains('/shorts/')) {
+        final shortsIndex = url.indexOf('/shorts/');
+        var idStart = shortsIndex + '/shorts/'.length;
+        // 移除查询参数
+        var queryIndex = url.indexOf('?', idStart);
+        if (queryIndex == -1) queryIndex = url.indexOf('&', idStart);
+        if (queryIndex == -1) queryIndex = url.length;
+        return url.substring(idStart, queryIndex);
+      }
+
+      // 处理常规 YouTube URL: youtube.com/watch?v=VIDEO_ID
+      if (url.contains('watch?v=')) {
+        final vIndex = url.indexOf('watch?v=');
+        var idStart = vIndex + 'watch?v='.length;
+        var queryIndex = url.indexOf('&', idStart);
+        if (queryIndex == -1) queryIndex = url.length;
+        return url.substring(idStart, queryIndex);
+      }
+
+      // 处理短链接: youtu.be/VIDEO_ID
+      if (url.contains('youtu.be/')) {
+        final beIndex = url.indexOf('youtu.be/');
+        var idStart = beIndex + 'youtu.be/'.length;
+        var queryIndex = url.indexOf('?', idStart);
+        if (queryIndex == -1) queryIndex = url.indexOf('&', idStart);
+        if (queryIndex == -1) queryIndex = url.length;
+        return url.substring(idStart, queryIndex);
+      }
+
+      // 处理嵌入链接: youtube.com/embed/VIDEO_ID
+      if (url.contains('/embed/')) {
+        final embedIndex = url.indexOf('/embed/');
+        var idStart = embedIndex + '/embed/'.length;
+        var queryIndex = url.indexOf('?', idStart);
+        if (queryIndex == -1) queryIndex = url.indexOf('&', idStart);
+        if (queryIndex == -1) queryIndex = url.length;
+        return url.substring(idStart, queryIndex);
+      }
+
+      // 尝试使用 youtube_explode_dart 库解析
+      final videoId = VideoId(url);
+      return videoId.value;
+    } catch (e) {
+      print('提取YouTube视频ID失败: $e');
+      return null;
+    }
+  }
+
   /// 解析YouTube视频
   Future<VideoInfo?> parseYouTubeVideo(String url) async {
     try {
       // 从URL获取视频ID
-      final videoId = VideoId(url);
+      final videoIdStr = extractVideoId(url);
+      if (videoIdStr == null) {
+        print('无法从URL提取视频ID: $url');
+        return null;
+      }
+      final videoId = VideoId(videoIdStr);
 
       // 获取视频元数据
       final video = await _yt.videos.get(videoId);
@@ -42,7 +99,12 @@ class YouTubeParserService {
   /// 获取所有可用的视频流
   Future<Map<String, String>> getVideoStreams(String url) async {
     try {
-      final videoId = VideoId(url);
+      final videoIdStr = extractVideoId(url);
+      if (videoIdStr == null) {
+        print('无法从URL提取视频ID: $url');
+        return {};
+      }
+      final videoId = VideoId(videoIdStr);
       final manifest = await _yt.videos.streamsClient.getManifest(videoId);
 
       final streams = <String, String>{};
